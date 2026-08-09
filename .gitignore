@@ -14,3 +14,6 @@ sdkconfig.esp32-c6-devkitc-1
 backup/
 
 .DS_Store
+
+# Python 匯入產生器腳本時留下的
+scripts/__pycache__/
