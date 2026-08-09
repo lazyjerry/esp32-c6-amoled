@@ -1,5 +1,6 @@
-// QMI8658 只用加速度計。偵測不看單一軸，而是先用低通估出重力方向，
-// 再把動態加速度投影到那條軸上——板子怎麼拿都算得出「上下」，符合三軸甩動的需求。
+// QMI8658 只用加速度計。兩種手勢都不看單一軸，而是先用低通估出重力方向，
+// 再看動態加速度落在哪裡：沿重力軸的分量是上下甩（擲筊），垂直於重力的是左右晃（重置）。
+// 板子怎麼拿都算得出來，符合三軸的需求。
 #include "imu.h"
 
 #include <math.h>
@@ -26,17 +27,30 @@
 
 #define LSB_PER_G 4096.0f         // ±8g 檔位
 
-#define SAMPLE_MS       10
-#define GRAVITY_ALPHA   0.05f     // 重力低通，時間常數約 200ms
-#define SWING_G         1.2f      // 一個半程要跨過的動態加速度
-#define SWING_HALVES    3         // 上→下→上，少於三段當成撞到桌子
-#define SWING_WINDOW_MS 900
-#define COOLDOWN_MS     2000
+#define SAMPLE_MS     10
+#define GRAVITY_ALPHA 0.05f       // 重力低通，時間常數約 200ms
 
 static const char *TAG = "imu";
 
+// 一次「半程」是動態加速度跨過門檻、而且方向和上一次相反。
+// 上下甩要三段（上→下→上）才算數，免得放下板子也觸發；左右晃是重置用的輕手勢，兩段就夠。
+typedef struct {
+    const char *name;
+    float thresh;          // g
+    int halves_needed;
+    int window_ms;         // 幾段之間允許的間隔
+    int cooldown_ms;
+    int halves, sign;
+    int64_t window_us, fired_us;
+    volatile bool fired;
+} swing_t;
+
+static swing_t s_shake = {.name = "上下甩", .thresh = 1.2f, .halves_needed = 3,
+                          .window_ms = 900, .cooldown_ms = 2000};
+static swing_t s_swipe = {.name = "左右晃", .thresh = 0.9f, .halves_needed = 2,
+                          .window_ms = 700, .cooldown_ms = 1500};
+
 static i2c_master_dev_handle_t s_dev;
-static volatile bool s_shake;
 
 static esp_err_t reg_write(uint8_t reg, uint8_t val)
 {
@@ -60,48 +74,68 @@ static esp_err_t read_accel(float *x, float *y, float *z)
     return ESP_OK;
 }
 
+static void swing_feed(swing_t *sw, float value, int64_t now)
+{
+    if (sw->halves > 0 && now - sw->window_us > sw->window_ms * 1000) {
+        sw->halves = 0;
+        sw->sign = 0;
+    }
+
+    int s = (value > sw->thresh) ? 1 : (value < -sw->thresh ? -1 : 0);
+    if (s == 0 || s == sw->sign) return;
+
+    if (sw->halves == 0) sw->window_us = now;
+    sw->halves++;
+    sw->sign = s;
+    ESP_LOGI(TAG, "%s %d/%d（%.1f g）", sw->name, sw->halves, sw->halves_needed, value);
+
+    if (sw->halves < sw->halves_needed) return;
+
+    // 數滿就重來。冷卻中的話只是吞掉，不能讓計數累積成 3/2、4/2
+    sw->halves = 0;
+    sw->sign = 0;
+    if (now - sw->fired_us > sw->cooldown_ms * 1000) {
+        sw->fired_us = now;
+        sw->fired = true;
+    }
+}
+
+static bool swing_take(swing_t *sw)
+{
+    if (!sw->fired) return false;
+    sw->fired = false;
+    return true;
+}
+
 static void imu_task(void *arg)
 {
-    float gx = 0, gy = 0, gz = 0;
+    float g[3] = {0, 0, 0};
     bool primed = false;
-    int halves = 0, sign = 0;
-    int64_t window_us = 0, fired_us = 0;
 
     while (1) {
-        float ax, ay, az;
-        if (read_accel(&ax, &ay, &az) == ESP_OK) {
+        float a[3];
+        if (read_accel(&a[0], &a[1], &a[2]) == ESP_OK) {
             if (!primed) {
-                gx = ax; gy = ay; gz = az;
+                for (int i = 0; i < 3; i++) g[i] = a[i];
                 primed = true;
             }
-            gx += GRAVITY_ALPHA * (ax - gx);
-            gy += GRAVITY_ALPHA * (ay - gy);
-            gz += GRAVITY_ALPHA * (az - gz);
+            for (int i = 0; i < 3; i++) g[i] += GRAVITY_ALPHA * (a[i] - g[i]);
 
-            float norm = sqrtf(gx * gx + gy * gy + gz * gz);
+            float norm = sqrtf(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
             if (norm > 0.3f) {
-                // 動態加速度在重力軸上的投影：正負就是上下
-                float p = ((ax - gx) * gx + (ay - gy) * gy + (az - gz) * gz) / norm;
-                int s = (p > SWING_G) ? 1 : (p < -SWING_G ? -1 : 0);
+                float dyn[3] = {a[0] - g[0], a[1] - g[1], a[2] - g[2]};
+                float up = (dyn[0] * g[0] + dyn[1] * g[1] + dyn[2] * g[2]) / norm;
+
+                // 最接近水平的那一軸（重力分量最小）拿來當左右的帶號量；
+                // 直接用垂直分量的長度會沒有正負，數不出方向反轉
+                int lat = 0;
+                for (int i = 1; i < 3; i++) {
+                    if (fabsf(g[i]) < fabsf(g[lat])) lat = i;
+                }
+
                 int64_t now = esp_timer_get_time();
-
-                if (halves > 0 && now - window_us > SWING_WINDOW_MS * 1000) {
-                    halves = 0;
-                    sign = 0;
-                }
-                if (s != 0 && s != sign) {
-                    if (halves == 0) window_us = now;
-                    halves++;
-                    sign = s;
-                    ESP_LOGI(TAG, "甩動 %d/%d（%.1f g）", halves, SWING_HALVES, p);
-
-                    if (halves >= SWING_HALVES && now - fired_us > COOLDOWN_MS * 1000) {
-                        fired_us = now;
-                        halves = 0;
-                        sign = 0;
-                        s_shake = true;
-                    }
-                }
+                swing_feed(&s_shake, up, now);
+                swing_feed(&s_swipe, dyn[lat], now);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(SAMPLE_MS));
@@ -138,9 +172,6 @@ esp_err_t imu_init(void)
     return ESP_OK;
 }
 
-bool imu_take_shake(void)
-{
-    if (!s_shake) return false;
-    s_shake = false;
-    return true;
-}
+bool imu_take_shake(void) { return swing_take(&s_shake); }
+
+bool imu_take_swipe(void) { return swing_take(&s_swipe); }

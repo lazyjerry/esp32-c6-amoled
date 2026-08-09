@@ -1,4 +1,4 @@
-// QMI8658 加速度計：偵測「由下往上、再由上往下」的甩動
+// QMI8658 加速度計：分辨「上下甩」與「左右晃」兩種手勢
 #pragma once
 
 #include <stdbool.h>
@@ -7,5 +7,7 @@
 
 esp_err_t imu_init(void);
 
-// 取走一次搖動事件，沒有事件回 false。事件由背景任務產生，取走即清除
-bool imu_take_shake(void);
+// 取走一次手勢事件，沒有事件回 false。事件由背景任務產生，取走即清除。
+// 沒有要處理的時候也該定期取走，否則會留到下一個狀態才觸發
+bool imu_take_shake(void);   // 上下甩：擲筊
+bool imu_take_swipe(void);   // 左右晃：把結果畫面收掉
