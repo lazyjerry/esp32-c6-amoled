@@ -18,6 +18,7 @@
 #define TCA9554_CONFIG 0x03
 #define EXIO_LCD_RST   (1 << 4)
 #define EXIO_TOUCH_RST (1 << 5)
+#define EXIO_SPK_PWR   (1 << 7)   // BSP_POWER_AMP_IO，高電位開喇叭
 
 #define AXP2101_ADDR    0x34
 #define AXP2101_INTEN2  0x41
@@ -39,6 +40,7 @@
 static const char *TAG = "board";
 
 static i2c_master_bus_handle_t s_bus;
+static i2c_master_dev_handle_t s_exio;
 static i2c_master_dev_handle_t s_axp;
 static esp_lcd_panel_handle_t s_panel;
 static esp_lcd_panel_io_handle_t s_io;
@@ -79,22 +81,34 @@ static esp_err_t add_dev(uint16_t addr, i2c_master_dev_handle_t *out)
 // LCD 與觸控的 reset 都掛在 TCA9554，冷開機時未被驅動，不放開螢幕不會亮
 static esp_err_t release_resets(void)
 {
-    i2c_master_dev_handle_t dev = NULL;
-    esp_err_t err = add_dev(TCA9554_ADDR, &dev);
+    esp_err_t err = add_dev(TCA9554_ADDR, &s_exio);
     if (err != ESP_OK) return err;
 
     uint8_t cfg = 0, out = 0;
-    if ((err = reg_read(dev, TCA9554_CONFIG, &cfg)) != ESP_OK) return err;
-    if ((err = reg_read(dev, TCA9554_OUTPUT, &out)) != ESP_OK) return err;
+    if ((err = reg_read(s_exio, TCA9554_CONFIG, &cfg)) != ESP_OK) return err;
+    if ((err = reg_read(s_exio, TCA9554_OUTPUT, &out)) != ESP_OK) return err;
 
     // 只動 bit4/bit5；bit7 是喇叭電源，整片覆寫會誤動
     const uint8_t mask = EXIO_LCD_RST | EXIO_TOUCH_RST;
-    if ((err = reg_write(dev, TCA9554_CONFIG, cfg & ~mask)) != ESP_OK) return err;
-    if ((err = reg_write(dev, TCA9554_OUTPUT, out & ~mask)) != ESP_OK) return err;
+    if ((err = reg_write(s_exio, TCA9554_CONFIG, cfg & ~mask)) != ESP_OK) return err;
+    if ((err = reg_write(s_exio, TCA9554_OUTPUT, out & ~mask)) != ESP_OK) return err;
     vTaskDelay(pdMS_TO_TICKS(50));
-    if ((err = reg_write(dev, TCA9554_OUTPUT, out | mask)) != ESP_OK) return err;
+    if ((err = reg_write(s_exio, TCA9554_OUTPUT, out | mask)) != ESP_OK) return err;
     vTaskDelay(pdMS_TO_TICKS(50));
     return ESP_OK;
+}
+
+esp_err_t board_speaker_power(bool on)
+{
+    if (s_exio == NULL) return ESP_ERR_INVALID_STATE;
+
+    uint8_t cfg = 0, out = 0;
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_CONFIG, &cfg), TAG, "exio cfg");
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_OUTPUT, &out), TAG, "exio out");
+
+    ESP_RETURN_ON_ERROR(reg_write(s_exio, TCA9554_CONFIG, cfg & ~EXIO_SPK_PWR), TAG, "exio cfg");
+    out = on ? (out | EXIO_SPK_PWR) : (out & ~EXIO_SPK_PWR);
+    return reg_write(s_exio, TCA9554_OUTPUT, out);
 }
 
 static esp_err_t pmic_init(void)
@@ -162,6 +176,8 @@ esp_err_t board_init(void)
     ESP_LOGI(TAG, "板級初始化完成，面板 %dx%d", BOARD_LCD_H_RES, BOARD_LCD_V_RES);
     return ESP_OK;
 }
+
+i2c_master_bus_handle_t board_i2c_bus(void) { return s_bus; }
 
 esp_lcd_panel_handle_t board_panel(void) { return s_panel; }
 esp_lcd_panel_io_handle_t board_panel_io(void) { return s_io; }
