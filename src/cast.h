@@ -10,5 +10,5 @@ typedef enum {
 
 cast_result_t cast_draw(void);
 
+// 畫面上只呈現筊象本身，這個名稱目前只用在序列埠 log
 const char *cast_result_name(cast_result_t r);
-const char *cast_result_desc(cast_result_t r);

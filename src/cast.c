@@ -27,13 +27,3 @@ const char *cast_result_name(cast_result_t r)
         default:         return "立筊";
     }
 }
-
-const char *cast_result_desc(cast_result_t r)
-{
-    switch (r) {
-        case CAST_SHENG: return "神明允可，依此而行";
-        case CAST_XIAO:  return "神明一笑，所問不明，請再問過";
-        case CAST_YIN:   return "神明不允，此事不宜";
-        default:         return "極為罕見，宜慎重再問";
-    }
-}

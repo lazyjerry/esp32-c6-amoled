@@ -1,7 +1,7 @@
 // 由上往下看的第一人稱擲筊。整片螢幕就是地面，沒有地平線，所以景深全靠三件事：
 //   高度 h → 越高離眼睛越近 → 畫得越大、在畫面上往上挪
 //   影子   → 留在地面座標上不隨高度移動，和筊之間的距離就是高度感
-//   翻滾   → 平面／凸面兩張圖交替，落地才定住筊象
+//   翻滾   → 整段旋轉是從結果反推的，停在哪個角度就是哪一面，中途不另外切換貼圖
 // 整段跑在 LVGL 自己的 timer 裡，所以回呼內不需要再上 lvgl_port_lock。
 #include "cast_ui.h"
 
@@ -16,7 +16,6 @@
 
 LV_FONT_DECLARE(font_zh_16)
 LV_FONT_DECLARE(font_zh_28)
-LV_FONT_DECLARE(font_zh_64)
 LV_IMAGE_DECLARE(blk_flat);
 LV_IMAGE_DECLARE(blk_round);
 
@@ -29,24 +28,28 @@ LV_IMAGE_DECLARE(blk_round);
 #define TICK_MS 33
 #define PI_F 3.14159265f
 
-// 各階段的累計時間（ms）
+// 各階段的累計時間（ms）。跑完就停在結果上，收掉與否由外面決定
 #define T_FALL   1000    // 出手 → 落地（拋物線的一整段）
 #define T_SETTLE 1520    // 兩次彈跳
 #define T_ZOOM   2140    // 鏡頭拉近
-#define T_END    6700    // 結果停留
 
 #define B1_MS 300        // 第一次彈跳
 #define B2_MS 220
 
+// 翻滾的「角度進度」在落定時的總量。角速度在彈跳期間線性衰減到零，
+// 所以這段的等效時間只有一半
+#define F_MAX (T_FALL + (T_SETTLE - T_FALL) / 2)
+
 // 鏡頭中心：拉近時所有東西都往這點的反方向散開
 #define CX 184
-#define CY 250
+#define CY 228
 
 #define S_GROUND 170     // 貼在地面時的縮放（256 = 原尺寸）
 #define H_HAND    90     // 出手時手離地的高度，單位是螢幕像素
-#define H_REF    420     // 高度換成放大倍率的參考值。放大得越少，最高點兩片越不會疊在一起
+#define H_REF    420     // 高度換成放大倍率的參考值
 #define H_LIFT    55     // 高度換成畫面上移的比例（%）
-#define Z_MAX    150     // 鏡頭拉近後的倍率（%）。再大兩片就要頂到畫面左右邊
+#define SPREAD    40     // 飛越高就分越開，兩片才不會在最高點疊在一起
+#define Z_MAX    168     // 鏡頭拉近後的倍率（%）。再大兩片就要頂到畫面左右邊
 
 #define SHADOW_OPA 135
 #define SHADOW_W   58    // 佔筊寬的百分比。做太大會從月牙的凹口露出來
@@ -61,7 +64,8 @@ typedef struct {
     lv_obj_t *shadow;
     int32_t x_hand, y_hand;
     int32_t x_land, y_land;
-    float spin;            // 翻滾速度，圈/秒；正負是方向
+    int32_t spread;        // 飛行中往外偏的方向與幅度
+    float spin_total;      // 整段要轉的總角度（度），由結果反推；正負是方向
     int32_t idle_rot;      // 0.1 度
     int32_t final_rot;
     bool final_round;
@@ -71,19 +75,15 @@ typedef struct {
 static lv_obj_t *s_scr;
 static lv_obj_t *s_hint;
 static lv_obj_t *s_hint2;
-static lv_obj_t *s_name;
-static lv_obj_t *s_desc;
 
 static block_t s_blk[BLOCKS];
 static lv_timer_t *s_timer;
 static uint32_t s_start_tick;
 static uint32_t s_frames;
-static uint32_t s_anim_frames;   // 只算到鏡頭停下為止，結果停留那幾秒沒有重繪不列入
 static int32_t s_t;
 static uint8_t s_clacked;      // 已播過的音效位元遮罩
-static bool s_result_shown;
-static cast_result_t s_result;
 static volatile bool s_busy;
+static volatile bool s_holding;
 
 static const struct {
     int32_t at_ms;
@@ -159,8 +159,11 @@ static void set_face(block_t *b, bool round)
 }
 
 // 把地面座標 + 高度投影到畫面上，順便擺好影子
-static void project(block_t *b, int32_t gx, int32_t gy, float h, float z, int32_t rot)
+static void place_at(block_t *b, float travel, float h, float z, int32_t rot)
 {
+    int32_t gx = lerp(b->x_hand, b->x_land, travel) + (int32_t)(b->spread * h / H_REF);
+    int32_t gy = lerp(b->y_hand, b->y_land, travel);
+
     int32_t sx = CX + (int32_t)((gx - CX) * z);
     int32_t sy = CY + (int32_t)((gy - CY) * z);
 
@@ -179,24 +182,26 @@ static void project(block_t *b, int32_t gx, int32_t gy, float h, float z, int32_
     lv_image_set_rotation(b->img, rot);
 }
 
-// 翻滾角度。落地後角速度線性衰減，看起來才像被地面吃掉動能
+// 翻滾進度 0~1。落地後角速度線性衰減到零，看起來才像被地面吃掉動能
+static float tumble_progress(int32_t t_ms)
+{
+    if (t_ms >= T_SETTLE) return 1.0f;
+    if (t_ms <= T_FALL) return (float)t_ms / F_MAX;
+
+    float sub = (float)(t_ms - T_FALL);
+    float span = (float)(T_SETTLE - T_FALL);
+    return (T_FALL + sub * (1.0f - sub / (2.0f * span))) / F_MAX;
+}
+
+// 朝上的是哪一面，完全由角度決定：[0,180) 是平面、[180,360) 是凸面。
+// 因為落定角度是從結果反推的，翻滾途中不需要、也不可以另外去切換貼圖
 static void tumble(const block_t *b, int32_t t_ms, int32_t *rot, bool *round)
 {
-    float f;
-    if (t_ms <= T_FALL) {
-        f = (float)t_ms;
-    } else {
-        float sub = (float)(t_ms - T_FALL);
-        float span = (float)(T_SETTLE - T_FALL);
-        f = T_FALL + sub * (1.0f - sub / (2.0f * span));
-    }
-
     // 從待機的角度接著轉，開拋時才不會瞬間跳角度
-    float deg = b->idle_rot / 10.0f + b->spin * 0.36f * f;
+    float deg = b->idle_rot / 10.0f + b->spin_total * tumble_progress(t_ms);
     int32_t r = (int32_t)(deg * 10.0f) % 3600;
     if (r < 0) r += 3600;
     *rot = r;
-    // 每轉半圈換一面
     *round = ((((int)floorf(deg / 180.0f)) % 2) + 2) % 2;
 }
 
@@ -205,24 +210,11 @@ static void show_idle(void)
     for (int i = 0; i < BLOCKS; i++) {
         block_t *b = &s_blk[i];
         set_face(b, i == 1);
-        project(b, b->x_hand, b->y_hand, H_HAND, 1.0f, b->idle_rot);
+        place_at(b, 0.0f, H_HAND, 1.0f, b->idle_rot);
         lv_image_set_antialias(b->img, true);
     }
-    lv_obj_remove_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_name, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_desc, LV_OBJ_FLAG_HIDDEN);
-}
-
-static void show_result(void)
-{
-    lv_label_set_text(s_name, cast_result_name(s_result));
-    lv_label_set_text(s_desc, cast_result_desc(s_result));
-    lv_obj_align(s_name, LV_ALIGN_TOP_MID, 0, 24);
-    lv_obj_align(s_desc, LV_ALIGN_TOP_MID, 0, 106);
-    lv_obj_remove_flag(s_name, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(s_desc, LV_OBJ_FLAG_HIDDEN);
-    for (int i = 0; i < BLOCKS; i++) lv_image_set_antialias(s_blk[i].img, true);
+    lv_obj_add_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void play_due_clacks(void)
@@ -250,64 +242,63 @@ static void tick(lv_timer_t *timer)
 
     for (int i = 0; i < BLOCKS; i++) {
         block_t *b = &s_blk[i];
-        int32_t gx = lerp(b->x_hand, b->x_land, travel);
-        int32_t gy = lerp(b->y_hand, b->y_land, travel);
 
         if (s_t < T_SETTLE) {
             int32_t rot;
             bool round;
             tumble(b, s_t, &rot, &round);
             set_face(b, round);
-            project(b, gx, gy, h, z, rot);
+            place_at(b, travel, h, z, rot);
         } else {
             // 最後一次落地就定住筊象，之後只有鏡頭在動
             set_face(b, b->final_round);
-            project(b, gx, gy, 0.0f, z, b->final_rot);
+            place_at(b, travel, 0.0f, z, b->final_rot);
         }
     }
 
-    if (s_t >= T_ZOOM && !s_result_shown) {
-        s_result_shown = true;
-        s_anim_frames = s_frames;
-        show_result();
-    }
-    if (s_t >= T_END) {
+    if (s_t >= T_ZOOM) {
+        for (int i = 0; i < BLOCKS; i++) lv_image_set_antialias(s_blk[i].img, true);
         lv_timer_pause(timer);
-        show_idle();
         s_busy = false;
+        s_holding = true;
         ESP_LOGI(TAG, "拋擲 %" PRIu32 " 幀 / %d ms（%" PRIu32 " fps）",
-                 s_anim_frames, T_ZOOM, s_anim_frames * 1000 / T_ZOOM);
+                 s_frames, T_ZOOM, s_frames * 1000 / T_ZOOM);
     }
 }
 
-// 各筊象對應的落地姿態：平面朝上就貼平面圖，凸面朝上貼凸面圖
+// 落定的角度：同一面各給一個歪掉的角度，避免看起來像貼上去的。
+// 兩張表分別落在 [0,180) 與 [180,360)，剛好對應平面朝上與凸面朝上
+static const int32_t REST_FLAT[BLOCKS] = {250, 1650};
+static const int32_t REST_ROUND[BLOCKS] = {3380, 1980};
+// 整段飛行要轉幾圈；正負相反讓兩片看起來不是同一套動作
+static const int TURNS[BLOCKS] = {3, -4};
+
+// 先決定落定姿態，再回頭算整段要轉多少角度——旋轉停在哪一面就是哪一面，
+// 動畫和結果因此不可能接不起來
 static void setup_pose(cast_result_t r)
 {
-    for (int i = 0; i < BLOCKS; i++) {
-        block_t *b = &s_blk[i];
-        b->final_rot = i == 0 ? 250 : 3380;   // 各歪幾度，避免像貼上去的
-        b->spin = i == 0 ? 1.7f : -2.3f;
-    }
+    bool round[BLOCKS];
 
     switch (r) {
-        case CAST_SHENG:
-            s_blk[0].final_round = false;
-            s_blk[1].final_round = true;
-            break;
-        case CAST_XIAO:
-            s_blk[0].final_round = false;
-            s_blk[1].final_round = false;
-            break;
-        case CAST_YIN:
-            s_blk[0].final_round = true;
-            s_blk[1].final_round = true;
-            break;
-        default:
-            // 立筊：俯視看到的是側立的窄邊，用轉九十度的凸面充當
-            s_blk[0].final_round = true;
-            s_blk[0].final_rot = 900;
-            s_blk[1].final_round = false;
-            break;
+        case CAST_SHENG:  round[0] = false; round[1] = true;  break;
+        case CAST_XIAO:   round[0] = false; round[1] = false; break;
+        case CAST_YIN:    round[0] = true;  round[1] = true;  break;
+        default:          round[0] = true;  round[1] = false; break;
+    }
+
+    for (int i = 0; i < BLOCKS; i++) {
+        block_t *b = &s_blk[i];
+        b->final_round = round[i];
+        b->final_rot = round[i] ? REST_ROUND[i] : REST_FLAT[i];
+        // 立筊：俯視看到的是側立的窄邊，用直立的凸面充當（270 度同樣落在凸面那一段）
+        if (r == CAST_LI && i == 0) b->final_rot = 2700;
+
+        // 轉到目標角度，再補上整數圈；差值取正模，方向由 TURNS 的正負決定
+        float delta = fmodf((b->final_rot - b->idle_rot) / 10.0f * (TURNS[i] > 0 ? 1.0f : -1.0f),
+                            360.0f);
+        if (delta < 0.0f) delta += 360.0f;
+        int turns = TURNS[i] > 0 ? TURNS[i] : -TURNS[i];
+        b->spin_total = (delta + turns * 360.0f) * (TURNS[i] > 0 ? 1.0f : -1.0f);
     }
 }
 
@@ -335,16 +326,6 @@ static void build_screen(void)
     lv_label_set_text(s_hint2, "請誠心默念所求之事");
     lv_obj_align(s_hint2, LV_ALIGN_TOP_MID, 0, 92);
 
-    s_name = lv_label_create(s_scr);
-    lv_obj_set_style_text_font(s_name, &font_zh_64, 0);
-    lv_obj_set_style_text_color(s_name, lv_color_hex(0xFFD470), 0);
-    lv_label_set_text(s_name, "");
-
-    s_desc = lv_label_create(s_scr);
-    lv_obj_set_style_text_font(s_desc, &font_zh_16, 0);
-    lv_obj_set_style_text_color(s_desc, lv_color_hex(0xC8CBD0), 0);
-    lv_label_set_text(s_desc, "");
-
     // 影子先建，才會壓在筊底下
     for (int i = 0; i < BLOCKS; i++) {
         s_blk[i].shadow = lv_obj_create(s_scr);
@@ -356,12 +337,12 @@ static void build_screen(void)
     for (int i = 0; i < BLOCKS; i++) {
         s_blk[i].img = lv_image_create(s_scr);
         s_blk[i].showing = -1;
-        // 兩片全程保持間距，任何時刻都不重疊
-        s_blk[i].x_hand = i == 0 ? 112 : 256;
-        s_blk[i].y_hand = i == 0 ? 432 : 438;
-        s_blk[i].x_land = i == 0 ? 108 : 260;
-        s_blk[i].y_land = i == 0 ? 238 : 266;
-        // 待機時弦邊朝內、圓弧朝外，就是雙手捧筊的樣子
+        // 待機在畫面中段偏下，不貼底；弦邊朝內、圓弧朝外，就是雙手捧筊的樣子
+        s_blk[i].x_hand = i == 0 ? 108 : 268;
+        s_blk[i].y_hand = i == 0 ? 360 : 366;
+        s_blk[i].x_land = i == 0 ? 129 : 239;
+        s_blk[i].y_land = i == 0 ? 214 : 242;
+        s_blk[i].spread = i == 0 ? -SPREAD : SPREAD;
         s_blk[i].idle_rot = i == 0 ? 900 : 2700;
     }
     setup_pose(CAST_SHENG);
@@ -403,23 +384,18 @@ esp_err_t cast_ui_init(void)
 
 void cast_ui_play(cast_result_t r)
 {
-    if (s_busy) return;
+    if (s_busy || s_holding) return;
 
     lvgl_port_lock(0);
     s_busy = true;
-    s_result = r;
     s_t = 0;
     s_frames = 0;
-    s_anim_frames = 0;
     s_start_tick = lv_tick_get();
     s_clacked = 0;
-    s_result_shown = false;
 
     setup_pose(r);
     lv_obj_add_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_name, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_desc, LV_OBJ_FLAG_HIDDEN);
     // 飛行中改用最近鄰取樣：兩片小圖每幀都在轉，雙線性差值省不下但很吃 CPU
     for (int i = 0; i < BLOCKS; i++) lv_image_set_antialias(s_blk[i].img, false);
 
@@ -429,3 +405,23 @@ void cast_ui_play(cast_result_t r)
 }
 
 bool cast_ui_busy(void) { return s_busy; }
+
+bool cast_ui_holding(void) { return s_holding; }
+
+void cast_ui_reset(void)
+{
+    if (!s_holding) return;
+
+    lvgl_port_lock(0);
+    s_holding = false;
+    show_idle();
+    lvgl_port_unlock();
+}
+
+void cast_ui_show_hint(void)
+{
+    lvgl_port_lock(0);
+    lv_obj_remove_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
+    lvgl_port_unlock();
+}
