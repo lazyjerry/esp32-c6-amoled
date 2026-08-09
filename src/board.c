@@ -21,9 +21,13 @@
 #define EXIO_SPK_PWR   (1 << 7)   // BSP_POWER_AMP_IO，高電位開喇叭
 
 #define AXP2101_ADDR    0x34
+#define AXP2101_COMMON  0x10
+#define AXP2101_PRESS_TIME 0x27
 #define AXP2101_INTEN2  0x41
 #define AXP2101_INTSTS2 0x49
 #define AXP2101_PKEY_SHORT (1 << 3)   // INTSTS2 bit3 = POWERON short press
+#define AXP2101_SOFF       (1 << 0)   // COMMON_CONFIG bit0 = 軟關機
+#define AXP2101_PWRON_OFF  (1 << 2)   // COMMON_CONFIG bit2 = 長按 PWRON 關掉 PMIC
 
 #define LCD_HOST  SPI2_HOST
 #define LCD_PCLK  0
@@ -42,6 +46,7 @@ static const char *TAG = "board";
 static i2c_master_bus_handle_t s_bus;
 static i2c_master_dev_handle_t s_exio;
 static i2c_master_dev_handle_t s_axp;
+static uint8_t s_common_at_boot;
 static esp_lcd_panel_handle_t s_panel;
 static esp_lcd_panel_io_handle_t s_io;
 
@@ -120,6 +125,13 @@ static esp_err_t pmic_init(void)
     if ((err = reg_read(s_axp, AXP2101_INTEN2, &inten)) != ESP_OK) return err;
     if ((err = reg_write(s_axp, AXP2101_INTEN2, inten | AXP2101_PKEY_SHORT)) != ESP_OK) return err;
 
+    // 長按沒反應多半是 bit2 沒開。PMIC 不跟著 CPU 重置，原值只有真正斷電後的第一次開機才看得到
+    if ((err = reg_read(s_axp, AXP2101_COMMON, &s_common_at_boot)) != ESP_OK) return err;
+    if (!(s_common_at_boot & AXP2101_PWRON_OFF)) {
+        err = reg_write(s_axp, AXP2101_COMMON, s_common_at_boot | AXP2101_PWRON_OFF);
+        if (err != ESP_OK) return err;
+    }
+
     // 開機過程本身會留下旗標，先清掉免得一啟動就當成一次按鍵
     return reg_write(s_axp, AXP2101_INTSTS2, AXP2101_PKEY_SHORT);
 }
@@ -187,6 +199,24 @@ esp_err_t board_display_on(bool on)
     return esp_lcd_panel_disp_on_off(s_panel, on);
 }
 
+esp_err_t board_display_brightness(uint8_t level)
+{
+    return esp_lcd_panel_io_tx_param(s_io, 0x51, &level, 1);
+}
+
+void board_display_fade(uint8_t from, uint8_t to, uint32_t ms)
+{
+    const uint32_t step_ms = 16;
+    const uint32_t steps = ms / step_ms ? ms / step_ms : 1;
+    const int delta = (int)to - (int)from;
+
+    for (uint32_t i = 1; i <= steps; i++) {
+        esp_err_t err = board_display_brightness((uint8_t)((int)from + delta * (int)i / (int)steps));
+        if (err != ESP_OK) ESP_LOGW(TAG, "亮度寫入失敗：%s", esp_err_to_name(err));
+        vTaskDelay(pdMS_TO_TICKS(step_ms));
+    }
+}
+
 bool board_pwrkey_short_pressed(void)
 {
     if (s_axp == NULL) return false;
@@ -197,4 +227,28 @@ bool board_pwrkey_short_pressed(void)
 
     reg_write(s_axp, AXP2101_INTSTS2, AXP2101_PKEY_SHORT);   // 寫 1 清除
     return true;
+}
+
+void board_pmic_log(void)
+{
+    if (s_axp == NULL) {
+        ESP_LOGW(TAG, "AXP2101 未就緒");
+        return;
+    }
+
+    uint8_t common = 0, press = 0;
+    reg_read(s_axp, AXP2101_COMMON, &common);
+    reg_read(s_axp, AXP2101_PRESS_TIME, &press);
+    // COMMON bit2 = 長按斷電使能；PRESS bit[1:0] 開機門檻、bit[3:2] 關機門檻（4/6/8/10 秒）
+    ESP_LOGI(TAG, "AXP2101 COMMON 開機時=0x%02X 現在=0x%02X，PRESS=0x%02X",
+             s_common_at_boot, common, press);
+}
+
+esp_err_t board_power_off(void)
+{
+    if (s_axp == NULL) return ESP_ERR_INVALID_STATE;
+
+    uint8_t common = 0;
+    ESP_RETURN_ON_ERROR(reg_read(s_axp, AXP2101_COMMON, &common), TAG, "axp common");
+    return reg_write(s_axp, AXP2101_COMMON, common | AXP2101_SOFF);
 }
