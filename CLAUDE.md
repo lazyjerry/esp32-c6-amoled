@@ -69,10 +69,13 @@ I2S 資料線與喇叭電源見 [docs/notes/bsp-i2s-dout-is-esp-side.md](docs/no
 
 - **只在這個專案／這片板子成立** → `docs/notes/`
 - **跨專案可重用**（shell 陷阱、工具鏈通則等）→ 全域知識庫 `~/.knowledge-skill/knowledge/`，走 knowledge-record-skill，不放這裡
+- **研究過程與完整報告** → `docs/knowledge-skill/<任務名稱>-<流水號>/`，走 knowledge-skill。這裡收的是查證過程與結論全文，`docs/notes/` 只收壓縮過的結論
 
 ## Git 提交
 
 **每次任務結束後執行 commit**，走 git-atomic-commit skill：依目的拆成原子提交，只收本次任務的變更，不夾帶既有或無關的修改。任務中途不提交，等結束再一次整理。
+
+**研究任務結束後，`docs/knowledge-skill/` 的研究資料要一併 commit 並 push。** 這批資料進版控，理由是查證成本高、結論會被後續任務引用；留在本機等於下次重查。報告與程式碼變更拆成不同提交。
 
 ## 建置
 
