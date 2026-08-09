@@ -1,0 +1,21 @@
+# This file was automatically generated for projects
+# without default 'CMakeLists.txt' file.
+
+FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/src/*.c)
+
+# 這個元件不叫 main，IDF 不會自動把所有元件列進相依，要自己列
+idf_component_register(
+    SRCS ${app_sources}
+    INCLUDE_DIRS "."
+    REQUIRES
+        driver
+        esp_lcd
+        esp_timer
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_http_client
+        esp-tls
+        mbedtls
+        nvs_flash
+)

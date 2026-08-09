@@ -1,0 +1,14 @@
+dependencies:
+  idf: ">=5.5"
+  # V1 面板驅動；V2 是 espressif/esp_lcd_co5300
+  waveshare/esp_lcd_sh8601: "^2.0.0"
+  # 註：本板觸控雖應答 0x38，但不是真 FT5x06（vendor id 0xA3=0x64），
+  # espressif/esp_lcd_touch_ft5x06 的 init 會把它寫到不回應 I2C，故不採用，改直接讀暫存器
+  espressif/esp_lvgl_port: "^2.9.0"
+  # 下限 9.3：esp_lvgl_port 2.9 要 LV_COLOR_FORMAT_RGB565_SWAPPED，9.2 沒有。
+  # 上限 9.3：再往上沒驗過 lv_font_conv 1.5.3 產出的字型結構
+  lvgl/lvgl: "~9.3.0"
+  # IDF 6.0 起 cJSON 不再內建，改由元件註冊表提供
+  espressif/cjson: "^1.7.19"
+  # IDF 6.0 把 wifi_provisioning 換成這個；SoftAP 配網用
+  espressif/network_provisioning: "^1.2.4"
