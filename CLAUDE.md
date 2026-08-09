@@ -70,6 +70,10 @@ I2S 資料線與喇叭電源見 [docs/notes/bsp-i2s-dout-is-esp-side.md](docs/no
 - **只在這個專案／這片板子成立** → `docs/notes/`
 - **跨專案可重用**（shell 陷阱、工具鏈通則等）→ 全域知識庫 `~/.knowledge-skill/knowledge/`，走 knowledge-record-skill，不放這裡
 
+## Git 提交
+
+**每次任務結束後執行 commit**，走 git-atomic-commit skill：依目的拆成原子提交，只收本次任務的變更，不夾帶既有或無關的修改。任務中途不提交，等結束再一次整理。
+
 ## 建置
 
 `pio` 不在 shell PATH，用絕對路徑或先 `export PATH="$HOME/.platformio/penv/bin:$PATH"`。
