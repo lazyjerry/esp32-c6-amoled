@@ -916,4 +916,3 @@ lv_font_t font_icon_72 = {
 
 
 #endif /*#if FONT_ICON_72*/
-

@@ -25,6 +25,8 @@ mkdir -p "$OUTDIR"
 
 # UI 固定字串 + 天氣狀態 + 台灣常見地名，涵蓋 app_config.h 預設值
 UI_CHARS='天氣溫度濕體感風速更新連線中失敗休眠電池未取得資料錯誤重試無網路秒分時前剛才第次設定手機掃描配熱點密碼'
+# 擲筊畫面
+CAST_CHARS='擲筊聖笑陰立搖動請誠心默念所求之事神明允可依此而行一不問過再宜極為罕見慎重擲出結果'
 WX_CHARS='晴多雲陰有霧淞毛細雨凍陣小大雪冰雹珠雷暴強沙塵'
 GEO_CHARS='台臺北新市桃園竹苗栗中彰化南投雲林嘉義高雄屏東宜蘭花蓮澎湖金門馬祖基隆鄉鎮區縣'
 
@@ -35,7 +37,7 @@ import sys
 s = sys.argv[1]
 seen = {}
 sys.stdout.write("".join(seen.setdefault(c, c) for c in s if c not in seen))
-' "${UI_CHARS}${WX_CHARS}${GEO_CHARS}${EXTRA}")"
+' "${UI_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${EXTRA}")"
 
 gen() {
     local name="$1" size="$2" bpp="$3" symbols="$4" ranges="$5"
@@ -53,11 +55,13 @@ gen() {
         $ranges \
         ${symbols:+--symbols "$symbols"} \
         -o "$out"
+    # lv_font_conv 會在檔尾多留一行空白，git 的 whitespace 檢查會擋下來
+    python3 -c 'import sys; f=sys.argv[1]; d=open(f).read().rstrip("\n")+"\n"; open(f,"w").write(d)' "$out"
 }
 
 # 內文與標題：ASCII + 中文子集
-gen font_zh_16 16 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0"
-gen font_zh_28 28 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0"
+gen font_zh_16 16 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C"
+gen font_zh_28 28 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C"
 # 大字溫度只出現數字，收整套中文會白白吃掉幾十 KB
 gen font_num_56 56 4 "" "-r 0x2D -r 0x2E -r 0x30-0x39 -r 0x43 -r 0xB0"
 # 天氣圖示。Arial Unicode 沒有 U+26A1 閃電，雷雨改用 U+2607

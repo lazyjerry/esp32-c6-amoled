@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
 
@@ -13,6 +14,12 @@
 #define BOARD_BOOT_GPIO 9
 
 esp_err_t board_init(void);
+
+// 板上 I2C 匯流排；IMU 與音訊 codec 都掛在這條上，不另開
+i2c_master_bus_handle_t board_i2c_bus(void);
+
+// 喇叭功放電源，掛在 TCA9554 的 bit7（不是 GPIO）
+esp_err_t board_speaker_power(bool on);
 
 esp_lcd_panel_handle_t board_panel(void);
 esp_lcd_panel_io_handle_t board_panel_io(void);

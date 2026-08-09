@@ -22,12 +22,15 @@
 
 | 筆記 | 觸發時機 | 摘要 | 狀態 |
 |------|----------|------|------|
+| [esp_codec_dev 的 I2S 資料層只收偶數聲道，單聲道音源要自己攤成兩個 slot](esp-codec-dev-needs-even-channels.md) | 用 espressif/esp_codec_dev 播單聲道 PCM，esp_codec_dev_open 直接回失敗時 | sample_info 的 channel 必須是偶數，填 1 會被擋掉。另外 audio_codec_i2c_cfg_t 的 addr 是 8 位元寫入位址（ES8311 填 0x30，匯流排上看到的是 0x18），且在 IDF 5.3 以上要填 bus_handle 才會走新的 i2c_master 驅動。 | 生效 |
+| [QMI8658 只用加速度計的最小啟動：CTRL1 沒開位址自動遞增就讀不到連續六個位元組](qmi8658-accel-minimal-bringup.md) | 要在本板讀 QMI8658 三軸加速度，或連讀 0x35 起六個 byte 拿到重複／錯位的值時 | 三行暫存器就能跑：CTRL1=0x40 開 ADDR_AI、CTRL2=0x26 設 ±8g/125Hz、CTRL7=0x01 開加速度計。±8g 是 4096 LSB/g，小端。驗收看靜置合力是不是 1g，不對就是量程或位元組序設錯。 | 生效 |
 | [本板觸控只是位址相同，不是真 FT5x06；套官方元件會把晶片寫到不回應 I2C](touch-not-real-ft5x06.md) | 要整合本板觸控、或看到 esp_lcd_touch_ft5x06 初始化後出現 I2C hardware timeout detected 時 | 觸控在 0x38 應答、vendor id(0xA3)=0x64，但暫存器語意與 FT5x06 不同。espressif/esp_lcd_touch_ft5x06 的 init 會寫入 8 個 FT5x06 電源管理暫存器（含 2 秒進 Monitor 模式），寫完晶片就停止回應 I2C。改成直接讀 0x02~0x06 五個 byte 即可，不需任何觸控元件。 | 生效 |
 
 ## hardware
 
 | 筆記 | 觸發時機 | 摘要 | 狀態 |
 |------|----------|------|------|
+| [BSP 的 I2S DOUT/DSIN 以 ESP 為視角，喇叭功放在 TCA9554 bit7 不是 GPIO](bsp-i2s-dout-is-esp-side.md) | 要在 ESP32-C6-Touch-AMOLED-1.8 上出聲，或 I2S 設定看起來都對卻完全沒聲音時 | ESP 端資料輸出是 GPIO23、輸入是 GPIO21，反接就是全靜音。功放電源掛在 TCA9554 bit7，es8311_codec_cfg_t 的 pa_pin 要填 -1 並自己去操作擴充晶片。 | 生效 |
 | [本板兩顆按鍵：BOOT 在 GPIO9 喚不醒 deep sleep，PWR 直通 AXP2101](esp32c6-boot-key-cannot-wake-deep-sleep.md) | 要在 ESP32-C6-Touch-AMOLED-1.8 上做按鍵休眠／喚醒，或規劃低功耗模式時 | 板上只有 BOOT 與 PWR 兩顆鍵（無 RESET）。C6 的 LP IO 只有 GPIO0~7 且被 LCD QSPI／SD／I2C 佔滿，BOOT 在 GPIO9 只能喚醒 light sleep；PWR 直通 AXP2101 PWRKEY，長按硬體斷電攔不到，短按可由 I2C 讀 INTSTS2 bit3 得知。 | 生效 |
 | [ESP32-C6 走原生 USB，序列埠是 usbmodem 而非 usbserial，且不需裝橋接晶片驅動](esp32c6-usb-serial-jtag-port.md) | macOS 上找不到 ESP32-C6 板子的序列埠，或準備安裝 CP2102/CH340 驅動前 | ESP32-C6 內建 USB Serial/JTAG，USB-C 直連 SoC，macOS 以原生 CDC-ACM 列舉為 /dev/cu.usbmodemXXXX；找不到裝置是沒接好或線材只供電，不是缺驅動。 | 生效 |
 | [觸控 IC 掃不到不代表沒有：reset 掛在 TCA9554，冷開機時被拉住](tca9554-holds-touch-reset.md) | 在 ESP32-C6-Touch-AMOLED-1.8 上 I2C 掃描找不到觸控位址（0x38／0x15），或要判定板子 V1/V2 版本時 | 本板觸控與 LCD 的 reset 接在 TCA9554（I2C 0x20）的 bit5／bit4，冷開機時擴充晶片全腳為輸入、觸控被拉在 reset，掃描掃不到；要先把該兩位元設為輸出並拉低再拉高，觸控才會出現在匯流排上。TCA9554 是獨立晶片，狀態不隨 CPU reset 清除，因此後續重開機看得到觸控，必須整片斷電才會回到冷開機狀態。 | 生效 |

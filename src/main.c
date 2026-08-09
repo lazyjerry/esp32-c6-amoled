@@ -1,12 +1,15 @@
-// 天氣看板：每小時更新一次，PWR 鍵手動刷新，BOOT 鍵切休眠／長按重新配網。
+// 擲筊：把板子當筊杯，快速上下甩一次就擲一次，畫面演出兩片筊落地並拉近看筊象。
+// 結果會一直停在畫面上，按鍵或左右晃動才收掉；收掉後要等冷卻時間才能再擲。
 //
-// 按鍵配置的由來：C6 只有 GPIO0~7 是 LP IO，而這片板子 0~5 給了 LCD QSPI、
-// 6 是 SD CS、7 是 I2C SCL，沒有一支接到按鍵。BOOT 鍵在 GPIO9，喚不醒 deep sleep，
-// 所以電源鍵走 light sleep，而且喚醒源只能是 BOOT，刷新只好交給 PWR 鍵。
+// 按鍵配置沿用天氣看板的結論：BOOT 在 GPIO9 喚不醒 deep sleep，所以休眠只能走 light sleep
+// 且喚醒源只能是它；PWR 鍵不佔 GPIO，讀 AXP2101 的 INTSTS2 就知道有沒有短按。
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "audio.h"
 #include "board.h"
+#include "cast.h"
+#include "cast_ui.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_sleep.h"
@@ -14,78 +17,33 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "net.h"
-#include "ui.h"
-#include "weather.h"
+#include "imu.h"
 
-#define UPDATE_INTERVAL_US (3600LL * 1000 * 1000)
-#define RETRY_INTERVAL_US  (300LL * 1000 * 1000)
-#define WIFI_TIMEOUT_MS    15000
-#define POLL_MS            50
-#define LONG_PRESS_MS      3000
+#define POLL_MS     50
+#define COOLDOWN_US (3LL * 1000 * 1000)
+// 結果剛出現時手通常還在動，這段時間只認按鍵，不然筊象會來不及看就被收掉
+#define HOLD_GUARD_US (800LL * 1000)
 
 static const char *TAG = "app";
 
-static int64_t s_last_update_us;
-static bool s_have_data;
+static int64_t s_ready_at_us;
+static int64_t s_hold_since_us;
+static bool s_hint_shown;
 
-static void update_weather(void)
+static void wait_button_released(void)
 {
-    ui_set_status("更新中");
-
-    if (net_connect(WIFI_TIMEOUT_MS) == ESP_OK) {
-        weather_t w = {0};
-        esp_err_t err = weather_fetch(&w);
-        net_disconnect();   // 一小時才用一次射頻，取完就關
-
-        if (err == ESP_OK) {
-            ui_show_weather(&w);
-            ui_set_status("");
-            s_have_data = true;
-        } else {
-            ui_set_status("更新失敗");
-        }
-    } else {
-        ui_set_status("網路失敗");
-    }
-
-    // 失敗也要記時間，否則重試條件永遠成立會變成連續重打
-    s_last_update_us = esp_timer_get_time();
-
-    // LVGL 雙緩衝與 TLS handshake 都吃堆積，餘量掉太低就要調小 DRAW_BUF_ROWS
-    ESP_LOGI(TAG, "剩餘堆積 %" PRIu32 " bytes", esp_get_free_heap_size());
-}
-
-static void run_provisioning(void)
-{
-    net_prov_info_t info = {0};
-    ESP_ERROR_CHECK(net_start_provisioning(&info));
-    ui_show_provisioning(info.ap_ssid, info.pop, info.qr_payload);
-
-    net_wait_provisioning();   // 阻塞到使用者設定完成
-    ESP_LOGI(TAG, "配網完成");
-    ui_show_weather_screen();
-}
-
-// 回傳按住的毫秒數；沒按著回 0
-static int wait_button_released(void)
-{
-    int held = 0;
     while (gpio_get_level(BOARD_BOOT_GPIO) == 0) {
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));
-        held += POLL_MS;
     }
     vTaskDelay(pdMS_TO_TICKS(POLL_MS));   // 去彈跳
-    return held;
 }
 
 static void enter_sleep(void)
 {
     ESP_LOGI(TAG, "進入 light sleep，按 BOOT 鍵喚醒（USB 序列埠會斷線，醒來後重新列舉）");
-    ui_set_status("休眠");
-    vTaskDelay(pdMS_TO_TICKS(300));
+    vTaskDelay(pdMS_TO_TICKS(200));
     board_display_on(false);
-    net_disconnect();
+    board_speaker_power(false);
 
     ESP_ERROR_CHECK(gpio_wakeup_enable(BOARD_BOOT_GPIO, GPIO_INTR_LOW_LEVEL));
     ESP_ERROR_CHECK(esp_sleep_enable_gpio_wakeup());
@@ -93,8 +51,8 @@ static void enter_sleep(void)
     gpio_wakeup_disable(BOARD_BOOT_GPIO);
 
     wait_button_released();
+    board_speaker_power(true);
     board_display_on(true);
-    ui_set_status("");
     ESP_LOGI(TAG, "已喚醒");
 }
 
@@ -108,57 +66,88 @@ static void button_init(void)
     ESP_ERROR_CHECK(gpio_config(&cfg));
 }
 
-// 短按切休眠，長按清掉 WiFi 憑證重開回配網
-static void handle_boot_key(void)
+// 手勢是背景任務產生的，沒輪到它的狀態也要定期取走，
+// 否則動畫或冷卻期間累積的一次晃動會在解禁的瞬間立刻生效
+static void drop_gestures(void)
 {
-    int held = wait_button_released();
+    imu_take_shake();
+    imu_take_swipe();
+}
 
-    if (held >= LONG_PRESS_MS) {
-        ESP_LOGW(TAG, "BOOT 長按 %d ms，重新配網", held);
-        ui_set_status("重新配網");
-        net_erase_credentials();
-        vTaskDelay(pdMS_TO_TICKS(500));
-        esp_restart();
-    }
-    enter_sleep();
+static void clear_result(const char *why)
+{
+    ESP_LOGI(TAG, "%s：收掉結果，冷卻 %lld 秒", why, COOLDOWN_US / 1000000);
+    cast_ui_reset();
+    s_ready_at_us = esp_timer_get_time() + COOLDOWN_US;
+    s_hint_shown = false;
+    drop_gestures();
+}
+
+static void throw_blocks(const char *why)
+{
+    cast_result_t r = cast_draw();
+    ESP_LOGI(TAG, "%s：%s", why, cast_result_name(r));
+    cast_ui_play(r);
 }
 
 void app_main(void)
 {
     ESP_ERROR_CHECK(board_init());
-    ESP_ERROR_CHECK(ui_init());
+    ESP_ERROR_CHECK(cast_ui_init());
     button_init();
 
-    ui_set_status("連線中");
-    ESP_ERROR_CHECK(net_init());
+    // 音效與感測器各自壞掉都還有另一半可以玩，不值得讓整台開不起來
+    esp_err_t err = audio_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "音訊初始化失敗（%s），本次無聲", esp_err_to_name(err));
 
-    if (net_needs_provisioning()) {
-        run_provisioning();
-    }
-    update_weather();
+    err = imu_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "IMU 初始化失敗（%s），只能用 PWR 鍵擲", esp_err_to_name(err));
+
+    ESP_LOGI(TAG, "就緒，剩餘堆積 %" PRIu32 " bytes", esp_get_free_heap_size());
 
     int prev_level = 1;
     while (1) {
+        bool pwr = board_pwrkey_short_pressed();
+        bool boot = false;
+
         int level = gpio_get_level(BOARD_BOOT_GPIO);
         if (prev_level == 1 && level == 0) {
             vTaskDelay(pdMS_TO_TICKS(POLL_MS));   // 去彈跳後再確認一次
             if (gpio_get_level(BOARD_BOOT_GPIO) == 0) {
-                handle_boot_key();
+                wait_button_released();
+                boot = true;
                 level = 1;
             }
         }
         prev_level = level;
 
-        if (board_pwrkey_short_pressed()) {
-            ESP_LOGI(TAG, "PWR 鍵短按，手動刷新");
-            update_weather();
-        }
+        if (cast_ui_holding()) {
+            int64_t now = esp_timer_get_time();
+            if (s_hold_since_us == 0) s_hold_since_us = now;
 
-        int64_t now = esp_timer_get_time();
-        // 沒資料時不等滿一小時，讓開機失敗的情況能自己補回來
-        int64_t due = s_have_data ? UPDATE_INTERVAL_US : RETRY_INTERVAL_US;
-        if (now - s_last_update_us >= due) {
-            update_weather();
+            // 結果停在畫面上：兩顆鍵都當成「收掉」，免得想收卻按到休眠
+            bool by_gesture = now - s_hold_since_us >= HOLD_GUARD_US && imu_take_swipe();
+            if (pwr || boot || by_gesture) {
+                clear_result(boot ? "BOOT 鍵" : (pwr ? "PWR 鍵" : "左右晃動"));
+                s_hold_since_us = 0;
+            } else {
+                drop_gestures();
+            }
+        } else if (boot) {
+            enter_sleep();
+            drop_gestures();
+        } else if (cast_ui_busy() || esp_timer_get_time() < s_ready_at_us) {
+            drop_gestures();
+        } else {
+            if (!s_hint_shown) {
+                cast_ui_show_hint();
+                s_hint_shown = true;
+            }
+            if (imu_take_shake()) {
+                throw_blocks("搖動");
+            } else if (pwr) {
+                throw_blocks("PWR 鍵");
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));

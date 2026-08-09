@@ -957,4 +957,3 @@ lv_font_t font_num_56 = {
 
 
 #endif /*#if FONT_NUM_56*/
-

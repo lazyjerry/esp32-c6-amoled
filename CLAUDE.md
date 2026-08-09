@@ -29,7 +29,9 @@ Waveshare ESP32-C6-Touch-AMOLED-1.8 開發專案（macOS + PlatformIO + ESP-IDF�
 
 **冷開機時掃不到 `0x38`** — 觸控 reset 掛在 TCA9554 bit5，需先放開。見 [docs/notes/tca9554-holds-touch-reset.md](docs/notes/tca9554-holds-touch-reset.md)。
 
-其他腳位（官方 BSP）：`TP_INT=15`、LCD QSPI `SCLK=0 / CS=5 / D0~D3=1,2,3,4`、面板 368×448、I2S `MCK=19 BCK=20 WS=22 DO=21 DI=23`、SD `CLK=11 CMD=10 DATA=18 CS=6`。
+其他腳位（官方 BSP）：`TP_INT=15`、LCD QSPI `SCLK=0 / CS=5 / D0~D3=1,2,3,4`、面板 368×448、I2S `MCK=19 BCK=20 WS=22`、SD `CLK=11 CMD=10 DATA=18 CS=6`。
+
+I2S 資料線與喇叭電源見 [docs/notes/bsp-i2s-dout-is-esp-side.md](docs/notes/bsp-i2s-dout-is-esp-side.md)：**ESP 端輸出是 `GPIO23`、輸入是 `GPIO21`**（BSP 的 `DOUT`/`DSIN` 以 ESP 為視角，不是 codec 視角），功放電源在 TCA9554 bit7。
 
 ## 操作筆記制度
 
@@ -87,7 +89,7 @@ cmake / ninja / dfu-util **不需要** brew 安裝，PlatformIO 自帶，理由�
 | Flash | 16MB | [sdkconfig.defaults](sdkconfig.defaults)（不是 `board_upload.flash_size`） |
 | 分區 | app 4MB + storage 11MB | [partitions.csv](partitions.csv) |
 | Console | USB Serial/JTAG | `sdkconfig.defaults`（UART0 在本板沒接出來） |
-| 外部元件 | `esp_lcd_sh8601` / `esp_lvgl_port` / `lvgl` / `cjson` / `network_provisioning` | [src/idf_component.yml](src/idf_component.yml)，走 IDF component manager 而非 `lib_deps` |
+| 外部元件 | `esp_lcd_sh8601` / `esp_lvgl_port` / `lvgl` / `cjson` / `network_provisioning` / `esp_codec_dev` | [src/idf_component.yml](src/idf_component.yml)，走 IDF component manager 而非 `lib_deps` |
 | 元件相依 | 手動列在 `REQUIRES` | [src/CMakeLists.txt](src/CMakeLists.txt)——這個元件不叫 `main`，IDF 不會自動掛上全部元件 |
 
 改了 `sdkconfig.defaults` 要刪掉 `sdkconfig.esp32-c6-devkitc-1` 重生；改了 `idf_component.yml` 要 `rm -rf .pio/build`。兩者都有筆記。
@@ -96,47 +98,49 @@ cmake / ninja / dfu-util **不需要** brew 安裝，PlatformIO 自帶，理由�
 
 IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`）、`wifi_provisioning` 改名 `espressif/network_provisioning`（API 前綴 `network_prov_*`）。另外 protocomm 預設只開 security v2，PoP 流程要的 v1 得自己在 `sdkconfig.defaults` 打開。
 
-## 應用：天氣看板
+## 應用：擲筊
 
-[src/main.c](src/main.c) 是實際應用，硬體與周邊拆成 [board.c](src/board.c)／[net.c](src/net.c)／[weather.c](src/weather.c)／[ui.c](src/ui.c)。
+[src/main.c](src/main.c) 是目前的主程式。快速上下甩板子擲一次筊，畫面是**由上往下看的第一人稱**：兩片紅木筊被拋出、落地彈跳，鏡頭再拉近看筊象，同時播木頭撞擊聲。結果會一直停在畫面上，收掉之後才能再擲。
 
 | 功能 | 作法 |
 |------|------|
-| 天氣來源 | Open-Meteo，HTTPS + esp-tls 內建根憑證組，免 API key |
-| 更新頻率 | 每小時；失敗時 5 分鐘後重試 |
-| WiFi 設定 | SoftAP 配網，螢幕畫 QR 給 ESP SoftAP Prov App 掃，憑證存 NVS |
-| **BOOT 鍵短按** | 切 light sleep（螢幕關／喚醒）。喚醒源只能是它，見筆記 |
-| **BOOT 鍵長按 3 秒** | 清除 WiFi 憑證並重開，回到配網畫面 |
-| **PWR 鍵短按** | 手動刷新。走 AXP2101 `INTSTS2` bit3 輪詢，不佔 GPIO |
-| 文字 | LVGL 9 + 自產中文子集字型（`src/fonts/`），內建 Montserrat 只有 ASCII |
+| 手勢 | QMI8658 加速度計，[imu.c](src/imu.c)。先低通估出重力方向，沿重力軸的動態分量是「上下甩」（擲筊），垂直方向的是「左右晃」（收結果）。板子怎麼拿都算得出來 |
+| 筊象 | [cast.c](src/cast.c)。聖筊 50%、笑筊 25%、陰筊 25%，立筊十萬分之一（0.001%），走 `esp_random` |
+| 動畫 | [cast_ui.c](src/cast_ui.c)。俯視沒有地平線，景深靠「高度→放大＋上移」＋「影子留在地面」。**整段翻滾的角度是從結果反推的**，停在哪個角度就是哪一面（`[0,180)` 平面、`[180,360)` 凸面），所以動畫和結果不可能接不起來 |
+| 音效 | [audio.c](src/audio.c)。ES8311 走 `esp_codec_dev`，落地與兩次彈跳各一聲，音量遞減 |
+| 收掉結果 | 兩顆鍵任一顆，或左右晃動。結果剛出現的 0.8 秒內只認按鍵——擲完手還在動，不然筊象會來不及看就被收掉 |
+| 冷卻 | 收掉後 3 秒才能再擲，時間到才會出現「搖一搖　擲筊」提示 |
+| **BOOT 鍵短按** | 平時切 light sleep（喚醒源只能是它，見筆記）；結果停著時改成收掉結果 |
+| **PWR 鍵短按** | 平時直接擲一次（不用搖，測試方便）；結果停著時收掉結果。走 AXP2101 `INTSTS2` bit3 輪詢，不佔 GPIO |
+| 文字 | LVGL 9 + 自產中文子集字型（`src/fonts/`），內建 Montserrat 只有 ASCII。結果畫面刻意沒有任何文字，只有放大的筊 |
 
-熱點名稱與 PoP 由 STA MAC 後幾碼推出來，每片板子固定：`WEATHER_xxxxxx` / 8 碼十六進位。
-
-設定與字型都由腳本產生，不要手改：
-
-```bash
-./scripts/config.sh --name 台北 --lat 25.0330 --lon 121.5654   # → src/app_config.h（只有地點，無密碼）
-./scripts/gen-font.sh --extra "額外中文字"                       # → src/fonts/*.c
-./scripts/monitor.sh 20                                        # 非互動式讀序列埠（pio device monitor 需要 TTY）
-```
-
-要回到「未配網」狀態測配網流程，長按 BOOT，或直接抹掉 NVS：
+圖、音效、字型都由腳本產生，**不要手改產物**：
 
 ```bash
-~/.platformio/penv/bin/python ~/.platformio/packages/tool-esptoolpy/esptool.py \
-  --chip esp32c6 -p /dev/cu.usbmodem1101 erase_region 0x9000 0x6000
+./scripts/gen-sprites.sh [--color 8A4028]      # → src/sprites/*.c（紅木半月，平面版與凸面版）
+./scripts/gen-sound.sh [--preview out.wav]     # → src/sounds/*（合成的木頭撞擊聲，可先在 Mac 上試聽）
+./scripts/gen-font.sh --extra "額外中文字"       # → src/fonts/*.c
+./scripts/monitor.sh 20 --reset                # 非互動式讀序列埠（pio device monitor 需要 TTY）
 ```
+
+**畫面上出現豆腐方塊 = 字型子集漏字。** 全形空白 `U+3000`、全形逗號 `U+FF0C` 這種標點也要收，改字串就要回頭改 `gen-font.sh` 的字集再重產。
+
+天氣看板的 [net.c](src/net.c)／[weather.c](src/weather.c)／[ui.c](src/ui.c) 與 [config.sh](scripts/config.sh) 都保留著但已不進入，`main.c` 沒有引用它們。
 
 ## 已驗證可用
 
 - **顯示**：SH8601 QSPI，368×448 RGB565。裸繪時色值需手動 byte-swap（紅是 `0x00F8`）；走 LVGL 則由 `flags.swap_bytes` 處理
-- **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。天氣看板沒用到觸控，程式保留在 [docs/examples/display-touch-verify.c](docs/examples/display-touch-verify.c)
-- **LVGL 9**：esp_lvgl_port，368×32 雙緩衝
+- **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。擲筊沒用到觸控，程式保留在 [docs/examples/display-touch-verify.c](docs/examples/display-touch-verify.c)
+- **LVGL 9**：esp_lvgl_port，368×64 雙緩衝（擲筊沒有網路，緩衝可以比天氣看板大一倍）
+- **IMU**：QMI8658 加速度計，`±8g` 檔位 4096 LSB/g，靜置合力實測 1.00~1.07 g。見 [docs/notes/qmi8658-accel-minimal-bringup.md](docs/notes/qmi8658-accel-minimal-bringup.md)
+- **音訊**：ES8311 走 `espressif/esp_codec_dev`，16 kHz／16-bit。單聲道音源要自己攤成兩個 slot，見 [docs/notes/esp-codec-dev-needs-even-channels.md](docs/notes/esp-codec-dev-needs-even-channels.md)
 
 ## 待處理
 
-1. 其他周邊：QMI8658 / PCF85063 / ES8311 / SD（AXP2101 目前只用到電源鍵 IRQ）
+1. 其他周邊：PCF85063 / SD（AXP2101 目前只用到電源鍵 IRQ）
 2. 電池電量顯示（AXP2101 已初始化，讀 gauge 即可）
+3. 拋擲動畫實測 21 fps（2140ms / 46 幀）。要更順的話下一步是把 sprite 改成 RGB565A8 少搬四分之一的位元組，或把影子的圓角改成預算好的圖
+4. 搖動門檻（`imu.c` 的 `SWING_G` / `SWING_HALVES`）只在桌上驗過，手持手感要實際調
 
 ## 官方參考來源
 
