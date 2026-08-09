@@ -66,7 +66,5 @@ gen font_zh_28 28 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C"
 gen font_num_56 56 4 "" "-r 0x2D -r 0x2E -r 0x30-0x39 -r 0x43 -r 0xB0"
 # 天氣圖示。Arial Unicode 沒有 U+26A1 閃電，雷雨改用 U+2607
 gen font_icon_72 72 4 "" "-r 0x2248 -r 0x2600-0x2603 -r 0x2607 -r 0x2744"
-# 擲筊結果只有這五個字，收整套子集會多吃十倍空間
-gen font_zh_64 64 4 "聖笑陰立筊" ""
 
 printf '完成，輸出於 %s\n' "$OUTDIR"
