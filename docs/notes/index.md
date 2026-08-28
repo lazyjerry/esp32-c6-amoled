@@ -31,7 +31,7 @@
 | 筆記 | 觸發時機 | 摘要 | 狀態 |
 |------|----------|------|------|
 | [BSP 的 I2S DOUT/DSIN 以 ESP 為視角，喇叭功放在 TCA9554 bit7 不是 GPIO](bsp-i2s-dout-is-esp-side.md) | 要在 ESP32-C6-Touch-AMOLED-1.8 上出聲，或 I2S 設定看起來都對卻完全沒聲音時 | ESP 端資料輸出是 GPIO23、輸入是 GPIO21，反接就是全靜音。功放電源掛在 TCA9554 bit7，es8311_codec_cfg_t 的 pa_pin 要填 -1 並自己去操作擴充晶片。 | 生效 |
-| [本板兩顆按鍵：BOOT 在 GPIO9 喚不醒 deep sleep，PWR 直通 AXP2101](esp32c6-boot-key-cannot-wake-deep-sleep.md) | 要在 ESP32-C6-Touch-AMOLED-1.8 上做按鍵休眠／喚醒，或規劃低功耗模式時 | 板上只有 BOOT 與 PWR 兩顆鍵（無 RESET）。C6 的 LP IO 只有 GPIO0~7 且被 LCD QSPI／SD／I2C 佔滿，BOOT 在 GPIO9 只能喚醒 light sleep；PWR 直通 AXP2101 PWRKEY，長按硬體斷電攔不到，短按可由 I2C 讀 INTSTS2 bit3 得知。 | 生效 |
+| [本板兩顆按鍵：BOOT 在 GPIO9 喚不醒 deep sleep，PWR 直通 AXP2101](esp32c6-boot-key-cannot-wake-deep-sleep.md) | 要在 ESP32-C6-Touch-AMOLED-1.8 上做按鍵休眠／喚醒，或規劃低功耗模式時 | 板上只有 BOOT 與 PWR 兩顆鍵（無 RESET）。C6 的 LP IO 只有 GPIO0~7 且被 LCD QSPI／SD／I2C 佔滿，BOOT 在 GPIO9 只能喚醒 light sleep；PWR 直通 AXP2101 PWRKEY，長按硬體斷電攔不到，短按可由 I2C 讀 INTSTS2 bit3 得知，並可寫 COMMON_CONFIG bit0 軟關機，比 light sleep 省得多。 | 生效 |
 | [ESP32-C6 走原生 USB，序列埠是 usbmodem 而非 usbserial，且不需裝橋接晶片驅動](esp32c6-usb-serial-jtag-port.md) | macOS 上找不到 ESP32-C6 板子的序列埠，或準備安裝 CP2102/CH340 驅動前 | ESP32-C6 內建 USB Serial/JTAG，USB-C 直連 SoC，macOS 以原生 CDC-ACM 列舉為 /dev/cu.usbmodemXXXX；找不到裝置是沒接好或線材只供電，不是缺驅動。 | 生效 |
 | [觸控 IC 掃不到不代表沒有：reset 掛在 TCA9554，冷開機時被拉住](tca9554-holds-touch-reset.md) | 在 ESP32-C6-Touch-AMOLED-1.8 上 I2C 掃描找不到觸控位址（0x38／0x15），或要判定板子 V1/V2 版本時 | 本板觸控與 LCD 的 reset 接在 TCA9554（I2C 0x20）的 bit5／bit4，冷開機時擴充晶片全腳為輸入、觸控被拉在 reset，掃描掃不到；要先把該兩位元設為輸出並拉低再拉高，觸控才會出現在匯流排上。TCA9554 是獨立晶片，狀態不隨 CPU reset 清除，因此後續重開機看得到觸控，必須整片斷電才會回到冷開機狀態。 | 生效 |
 
