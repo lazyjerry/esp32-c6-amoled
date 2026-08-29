@@ -30,6 +30,10 @@ mkdir -p "$OUTDIR"
 
 # UI 固定字串 + 天氣狀態 + 台灣常見地名，涵蓋 app_config.h 預設值
 UI_CHARS='天氣溫度濕體感風速更新連線中失敗休眠電池未取得資料錯誤重試無網路秒分時前剛才第次設定手機掃描配熱點密碼'
+# 開機期錯誤畫面（error_screen.c）
+ERR_CHARS='語料未燒錄接上執行'
+# 導覽：正殿的兩個側翼（stub_screen.c）
+NAV_CHARS='參拜簿尚開放'
 # 擲筊畫面
 CAST_CHARS='擲筊聖笑陰立搖動請誠心默念所求之事神明允可依此而行一不問過再宜極為罕見慎重擲出結果'
 WX_CHARS='晴多雲陰有霧淞毛細雨凍陣小大雪冰雹珠雷暴強沙塵'
@@ -55,7 +59,7 @@ import sys
 s = sys.argv[1]
 seen = {}
 sys.stdout.write("".join(seen.setdefault(c, c) for c in s if c not in seen))
-' "${UI_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
+' "${UI_CHARS}${ERR_CHARS}${NAV_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
 
 gen() {
     local name="$1" size="$2" bpp="$3" symbols="$4" ranges="$5"

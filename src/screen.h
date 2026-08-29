@@ -10,9 +10,11 @@
 #include "esp_err.h"
 
 typedef enum {
-    SCREEN_EV_BOOT_KEY,   // BOOT 鍵短按
-    SCREEN_EV_SHAKE,      // IMU 上下甩
-    SCREEN_EV_SWIPE,      // IMU 左右晃
+    SCREEN_EV_BOOT_KEY,      // BOOT 鍵短按
+    SCREEN_EV_SHAKE,         // IMU 上下甩
+    SCREEN_EV_WAVE,          // IMU 左右晃。刻意不叫 swipe，那是手指的動作
+    SCREEN_EV_SWIPE_LEFT,    // 手指往左掃
+    SCREEN_EV_SWIPE_RIGHT,
 } screen_event_t;
 
 typedef struct screen_s {

@@ -19,8 +19,6 @@ LV_FONT_DECLARE(font_zh_28)
 LV_IMAGE_DECLARE(blk_flat);
 LV_IMAGE_DECLARE(blk_round);
 
-// 天氣看板受限於 TLS 用 32 列；擲筊沒有網路，加倍換每幀更少次 flush
-#define DRAW_BUF_ROWS 64
 #define BLK_W 132
 #define BLK_H 70
 #define BLOCKS 2
@@ -95,17 +93,6 @@ static const struct {
     {T_FALL + 360,  42},
     {T_SETTLE,      26},
 };
-
-// SH8601 要求繪圖區起點偶數、終點奇數，否則整片畫面會歪掉。
-// LVGL 9 取消了 v8 的 rounder_cb，改在 INVALIDATE_AREA 事件裡調整。ui.c 有天氣版的孿生體
-static void round_area_cb(lv_event_t *e)
-{
-    lv_area_t *area = lv_event_get_param(e);
-    area->x1 &= ~1;
-    area->y1 &= ~1;
-    area->x2 |= 1;
-    area->y2 |= 1;
-}
 
 static float ease_out_cubic(float u)
 {
@@ -351,35 +338,21 @@ static void build_screen(void)
 
 esp_err_t cast_ui_init(void)
 {
-    const lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    ESP_RETURN_ON_ERROR(lvgl_port_init(&port_cfg), TAG, "lvgl port");
-
-    const lvgl_port_display_cfg_t disp_cfg = {
-        .io_handle = board_panel_io(),
-        .panel_handle = board_panel(),
-        .buffer_size = BOARD_LCD_H_RES * DRAW_BUF_ROWS,
-        .double_buffer = true,
-        .hres = BOARD_LCD_H_RES,
-        .vres = BOARD_LCD_V_RES,
-        .color_format = LV_COLOR_FORMAT_RGB565,
-        .flags = {
-            .buff_dma = true,
-            // 面板吃的是 byte-swap 過的 RGB565（紅是 0x00F8 不是 0xF800）
-            .swap_bytes = true,
-        },
-    };
-    lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);
-    ESP_RETURN_ON_FALSE(disp, ESP_FAIL, TAG, "add disp");
-
-    lv_display_add_event_cb(disp, round_area_cb, LV_EVENT_INVALIDATE_AREA, NULL);
-
     lvgl_port_lock(0);
     build_screen();
-    lv_screen_load(s_scr);
     s_timer = lv_timer_create(tick, TICK_MS, NULL);
     lv_timer_pause(s_timer);
     lvgl_port_unlock();
     return ESP_OK;
+}
+
+// 載入畫面的時機由 screen_mgr 決定，不在 init 裡就搶著 load——
+// 掛載失敗時要顯示的是錯誤畫面，這支就不會被呼叫
+void cast_ui_show(void)
+{
+    lvgl_port_lock(0);
+    lv_screen_load(s_scr);
+    lvgl_port_unlock();
 }
 
 void cast_ui_play(cast_result_t r)

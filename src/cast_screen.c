@@ -8,6 +8,8 @@
 
 #include "cast.h"
 #include "cast_ui.h"
+#include "screen_mgr.h"
+#include "shrine_screen.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -44,6 +46,7 @@ static void clear_result(const char *why)
 
 static esp_err_t enter(void)
 {
+    cast_ui_show();
     s_ready_at_us = 0;
     s_hold_since_us = 0;
     s_hint_shown = false;
@@ -90,7 +93,7 @@ static bool on_event(screen_event_t ev)
         }
         return false;
 
-    case SCREEN_EV_SWIPE:
+    case SCREEN_EV_WAVE:
         // 只在結果停著、且過了保護期之後才認
         if (cast_ui_holding() && s_hold_since_us != 0 &&
             esp_timer_get_time() - s_hold_since_us >= HOLD_GUARD_US) {
@@ -98,6 +101,18 @@ static bool on_event(screen_event_t ev)
             return true;
         }
         return false;
+
+    case SCREEN_EV_SWIPE_LEFT:
+    case SCREEN_EV_SWIPE_RIGHT:
+        // 滑回正殿。動畫跑到一半不讓走——筊還在空中就換頁，
+        // 動畫的 timer 會繼續在看不見的畫面上跑
+        if (cast_ui_busy()) return false;
+        cast_ui_reset();
+        s_ready_at_us = 0;
+        s_hold_since_us = 0;
+        s_hint_shown = false;
+        screen_mgr_goto(&shrine_screen);
+        return true;
     }
     return false;
 }

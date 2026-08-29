@@ -105,9 +105,27 @@ cmake / ninja / dfu-util **不需要** brew 安裝，PlatformIO 自帶，理由�
 
 IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`）、`wifi_provisioning` 改名 `espressif/network_provisioning`（API 前綴 `network_prov_*`）。另外 protocomm 預設只開 security v2，PoP 流程要的 v1 得自己在 `sdkconfig.defaults` 打開。
 
-## 應用：擲筊
+## 應用：掌上宮廟
 
-[src/main.c](src/main.c) 是目前的主程式。快速上下甩板子擲一次筊，畫面是**由上往下看的第一人稱**：兩片紅木筊被拋出、落地彈跳，鏡頭再拉近看筊象，同時播木頭撞擊聲。結果會一直停在畫面上，收掉之後才能再擲。
+開機進**正殿**，左右滑動去兩個側翼（參拜簿／設定，目前是空殼），點擊或 BOOT 進**擲筊**。
+畫面由 [src/screen_mgr.c](src/screen_mgr.c) 管，每個畫面實作 `enter / exit / tick / on_event`
+（介面在 [src/screen.h](src/screen.h)）；輸入統一收在 `main.c` 的主迴圈轉成事件派發。
+
+**畫面切換一律在主迴圈做**，LVGL 回呼只設旗標；畫面物件建一次就快取，不在 `exit()` 刪除。
+理由見 [筆記](docs/notes/lvgl-screen-switch-from-main-loop.md)。
+
+| 檔案 | 職責 |
+|------|------|
+| [display.c](src/display.c) | 起 LVGL 與面板，與任何單一畫面無關 |
+| [content.c](src/content.c) | 掛 storage 分區的 SPIFFS，並確認 `poems.json` 讀得到 |
+| [shrine_screen.c](src/shrine_screen.c) | 正殿。**神像與神龕是 LVGL 幾何佔位造型，不是美術**；香煙是 120×160 局部動畫 |
+| [stub_screen.c](src/stub_screen.c) | 參拜簿與設定的空殼，共用一份實作 |
+| [error_screen.c](src/error_screen.c) | 語料掛不起來時的死路畫面。刻意不退回擲筊 |
+| [cast_screen.c](src/cast_screen.c) | 擲筊，包住既有的 `cast_ui.c` |
+
+### 擲筊
+
+快速上下甩板子擲一次筊，畫面是**由上往下看的第一人稱**。兩片紅木筊被拋出、落地彈跳，鏡頭再拉近看筊象，同時播木頭撞擊聲。結果會一直停在畫面上，收掉之後才能再擲。
 
 | 功能 | 作法 |
 |------|------|
@@ -147,7 +165,7 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 ## 已驗證可用
 
 - **顯示**：SH8601 QSPI，368×448 RGB565。裸繪時色值需手動 byte-swap（紅是 `0x00F8`）；走 LVGL 則由 `flags.swap_bytes` 處理
-- **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。擲筊沒用到觸控，程式保留在 [docs/examples/display-touch-verify.c](docs/examples/display-touch-verify.c)
+- **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。[src/touch.c](src/touch.c) 把它接成 LVGL 指標裝置並自寫左右滑動判定；座標與面板 368×448 為 1:1，不需縮放或鏡射。**滑動判定成立時要 `lv_indev_reset()` 取消該次觸碰**，否則滑過按鈕等於按下去，見 [筆記](docs/notes/touch-swipe-must-cancel-lvgl-press.md)。擲筊本身沒用到觸控
 - **LVGL 9**：esp_lvgl_port，368×64 雙緩衝（擲筊沒有網路，緩衝可以比天氣看板大一倍）
 - **IMU**：QMI8658 加速度計，`±8g` 檔位 4096 LSB/g，靜置合力實測 1.00~1.07 g。見 [docs/notes/qmi8658-accel-minimal-bringup.md](docs/notes/qmi8658-accel-minimal-bringup.md)
 - **RTC**：PCF85063 @ `0x51`，[src/rtc.c](src/rtc.c)。讀寫與走時實測正常；**軟關機保時未驗證**，產品刻意不依賴

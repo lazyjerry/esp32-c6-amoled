@@ -8,9 +8,11 @@
 
 #include "audio.h"
 #include "board.h"
-#include "cast_screen.h"
 #include "cast_ui.h"
+#include "content.h"
+#include "display.h"
 #include "driver/gpio.h"
+#include "error_screen.h"
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
 #include "esp_system.h"
@@ -19,9 +21,11 @@
 #include "freertos/task.h"
 #include "imu.h"
 #include "screen_mgr.h"
+#include "shrine_screen.h"
+#include "touch.h"
 #include "verify_s3.h"
 
-// M0/S3 驗證建置（pio run -e verify-s3）：擲筊整支讓開，見 verify_s3.c。
+// 驗證建置（pio run -e verify-s3）：擲筊整支讓開。
 // 分岔放在這裡而不是只包住 app_main，否則驗證建置下所有 static 函式都會變成 unused
 #ifdef APP_VERIFY_S3
 
@@ -85,7 +89,7 @@ static void button_init(void)
 void app_main(void)
 {
     ESP_ERROR_CHECK(board_init());
-    ESP_ERROR_CHECK(cast_ui_init());
+    ESP_ERROR_CHECK(display_init());
     button_init();
 
     // 音效與感測器各自壞掉都還有另一半可以玩，不值得讓整台開不起來
@@ -95,7 +99,20 @@ void app_main(void)
     err = imu_init();
     if (err != ESP_OK) ESP_LOGW(TAG, "IMU 初始化失敗（%s），只能用 BOOT 鍵擲", esp_err_to_name(err));
 
-    ESP_ERROR_CHECK(screen_mgr_init(&cast_screen));
+    // 觸控壞掉還有 BOOT 鍵與 IMU 可以操作，不值得讓整台開不起來
+    err = touch_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "觸控初始化失敗（%s），本次無觸控", esp_err_to_name(err));
+
+    // 語料讀不到就停在錯誤畫面，不建立擲筊畫面。
+    // 讓裝置「看起來能用」只會把問題留到求到籤卻沒有籤詩的那一刻
+    esp_err_t content_err = content_mount();
+    if (content_err != ESP_OK) {
+        error_screen_set(esp_err_to_name(content_err));
+        ESP_ERROR_CHECK(screen_mgr_init(&error_screen));
+    } else {
+        ESP_ERROR_CHECK(cast_ui_init());
+        ESP_ERROR_CHECK(screen_mgr_init(&shrine_screen));
+    }
 
     ESP_LOGI(TAG, "就緒，剩餘堆積 %" PRIu32 " bytes", esp_get_free_heap_size());
     board_pmic_log();
@@ -128,11 +145,18 @@ void app_main(void)
         // 手勢每輪都取走再派發。目前畫面不處理就等於丟掉——
         // 這樣動畫或冷卻期間累積的晃動不會在解禁瞬間突然生效
         if (imu_take_shake()) screen_mgr_dispatch(SCREEN_EV_SHAKE);
-        if (imu_take_swipe()) screen_mgr_dispatch(SCREEN_EV_SWIPE);
+        if (imu_take_swipe()) screen_mgr_dispatch(SCREEN_EV_WAVE);
+
+        // 觸控滑動同樣是取走即清除：判定在 LVGL 任務裡做，這裡只負責派發
+        switch (touch_take_swipe()) {
+        case TOUCH_SWIPE_LEFT:  screen_mgr_dispatch(SCREEN_EV_SWIPE_LEFT); break;
+        case TOUCH_SWIPE_RIGHT: screen_mgr_dispatch(SCREEN_EV_SWIPE_RIGHT); break;
+        case TOUCH_SWIPE_NONE:  break;
+        }
 
         screen_mgr_tick();
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));
     }
 }
 
-#endif   // APP_VERIFY_S3
+#endif   // 驗證建置分岔

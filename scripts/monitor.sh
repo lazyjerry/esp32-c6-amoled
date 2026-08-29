@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SECS="20"
-PORT="/dev/cu.usbmodem1101"
+PORT=""
 RESET="0"
 
 for arg in "$@"; do
@@ -15,6 +15,12 @@ for arg in "$@"; do
         *)       SECS="$arg" ;;
     esac
 done
+
+# 尾碼由 USB 孔位決定（實測看過 1101 與 101），寫死會在換孔後打不開
+if [ -z "$PORT" ]; then
+    PORT="$(ls -1 /dev/cu.usbmodem* 2>/dev/null | head -1 || true)"
+    [ -n "$PORT" ] || { printf '找不到 /dev/cu.usbmodem*，板子接上了嗎？\n' >&2; exit 1; }
+fi
 
 PY="$HOME/.platformio/penv/bin/python"
 

@@ -73,9 +73,9 @@ v2 的產品定位（Ritual Loop，不做掌上算命機）與絕大多數技術
 368×448 全螢幕 frame buffer 需要 330KB，配不下（[sh8601-lvgl9-area-rounding.md](../notes/sh8601-lvgl9-area-rounding.md)）。現行 LVGL 用 368×64 雙緩衝（92KB）。既有的擲筊動畫**實測 21 fps**（2140ms / 46 幀），而那只是兩片半月 sprite 在小範圍內移動。
 → 全螢幕緩慢煙霧、燭火、神像淡入在這片板子上做不到。動畫必須限制在小矩形內。
 
-**限制 B：觸控沒有手勢，要自己算。**
+**限制 B：觸控沒有手勢，要自己算。**（2026-08-29 已解決）
 這顆晶片只是 I2C 位址與 FT5x06 相同，套官方元件會把它寫到不回應 I2C（[touch-not-real-ft5x06.md](../notes/touch-not-real-ft5x06.md)）。可用的只有：從 `0x02` 連讀 5 bytes 拿到單點 X/Y，20ms 輪詢。
-→ 滑動切換空間要自己從座標序列判定 swipe，並自己接成 LVGL indev。這是一項未開工的工作，不是現成能力。
+→ 已在 [touch.c](../../src/touch.c) 自行接成 LVGL indev 並自寫 swipe 判定。實測座標與面板 1:1，判定門檻為橫移 ≥90px、橫移 > 縱移 ×2、700ms 內。判定成立時必須 `lv_indev_reset()` 取消該次觸碰，否則滑過按鈕會被當成點擊——見 [touch-swipe-must-cancel-lvgl-press.md](../notes/touch-swipe-must-cancel-lvgl-press.md)。
 
 **限制 C：日常使用的電源模型只有一種。**
 BOOT 在 GPIO9，不是 LP IO，喚不醒 deep sleep；PWR 直通 AXP2101（[esp32c6-boot-key-cannot-wake-deep-sleep.md](../notes/esp32c6-boot-key-cannot-wake-deep-sleep.md)）。
@@ -125,7 +125,7 @@ BOOT 在 GPIO9，不是 LP IO，喚不醒 deep sleep；PWR 直通 AXP2101（[esp
 **一台永不連網的單機儀式裝置。** 開機即正殿，所有內容都燒在機身 flash 裡。
 
 v1 相對 v2 企劃「多」了什麼：AI 語感的解籤內容回到 v1（因為改成預產）。
-v1「少」了什麼：即時性。內容要換得插卡，不會自己更新。這正是換來開機快、無後端、無金鑰、無隱私問題的代價。
+v1「少」了什麼：即時性。內容要換得接 USB 重燒 storage 分區，不會自己更新。這正是換來開機快、無後端、無金鑰、無隱私問題的代價。
 
 ### v2／v3
 
@@ -198,11 +198,12 @@ UI 字串    ─┘         │                                          │
 
 **更新內容的代價**：要接 USB 重燒 `storage` 分區。對一台開發者自用的裝置，這不是問題；真正被換掉的只是「不接電腦就能換內容」這一項便利。
 
-**燒錄只動 storage 分區**，不必重燒整支韌體：
+**燒錄只動 storage 分區**，不必重燒整支韌體。不能用 `pio run -t buildfs / uploadfs`——
+PlatformIO 不產生也不燒 SPIFFS 映像，見 [筆記](../notes/pio-does-not-build-or-flash-spiffs.md)：
 
 ```bash
-~/.platformio/penv/bin/pio run -t buildfs      # 產生 storage image
-~/.platformio/penv/bin/pio run -t uploadfs     # 只燒 storage 分區
+./scripts/gen-content.sh      # data/*.json → spiffs_content/ 與 .pio/storage.bin
+./scripts/flash-content.sh    # 只燒 storage 分區，不動韌體
 ```
 
 ### 5.3 資料層
@@ -409,14 +410,18 @@ S1 與 S2 的結果都縮小了範圍：記憶卡改成 SPIFFS，M3 的日期相
 
 ### M1：骨架
 
-- [ ] `screen_mgr` 畫面管理器，輸入統一收在主迴圈
-- [ ] 觸控接成 LVGL indev，含自寫的 swipe 判定
-- [ ] 開機掛載 SPIFFS，讀不到就顯示錯誤提示畫面
-- [ ] 正殿畫面（靜態背景 + 香煙局部動畫）
-- [ ] 左右滑動切到參拜簿／設定（先放空殼）
-- [ ] 現有擲筊改成 `screen_mgr` 下的一個畫面，行為不變
+- [x] `screen_mgr` 畫面管理器，輸入統一收在主迴圈
+- [x] 觸控接成 LVGL indev，含自寫的 swipe 判定
+- [x] 開機掛載 SPIFFS，讀不到就顯示錯誤提示畫面
+- [x] 正殿畫面（靜態背景 + 香煙局部動畫）
+- [x] 左右滑動切到參拜簿／設定（先放空殼）
+- [x] 現有擲筊改成 `screen_mgr` 下的一個畫面，行為不變
 
 驗收：開機 2 秒內看到正殿；三個畫面可滑動切換不當機；擲筊功能與改造前一致。
+
+**2026-08-29 全數通過**：開機到正殿 1030ms（掛載 SPIFFS 佔 302ms）；正殿↔參拜簿↔設定↔擲筊
+共 20 次切換無異常；擲筊 48 幀 / 2140ms（22 fps），與改造前一致。
+語料抹除後開機會停在錯誤畫面（`SPIFFS: mount failed, -10025` → `(開機) → 語料錯誤`）。
 
 ### M2：儀式閉環
 
@@ -599,14 +604,18 @@ s2: ④ 5 秒後 10:00:05，相差 5 秒 → 走時正常
 
 ## 11. 下一步
 
-**M0 已全部完成**，進入 M1。
+**M0 與 M1 已全部完成**，進入 M2。
 
-1. `screen_mgr` 畫面管理器 — **已完成**（[screen_mgr.c](../../src/screen_mgr.c)），
-   擲筊改成 [cast_screen.c](../../src/cast_screen.c)，實機驗證行為一致
-2. 觸控接成 LVGL indev，含自寫的 swipe 判定 — 下一項
-3. 開機掛載 SPIFFS，讀不到就顯示錯誤提示畫面
-4. 正殿畫面（靜態背景 + 香煙局部動畫）
-5. 左右滑動切到參拜簿／設定（先放空殼）
+M1 收在這幾支：[screen_mgr.c](../../src/screen_mgr.c) 管畫面、[display.c](../../src/display.c) 起 LVGL、
+[touch.c](../../src/touch.c) 接觸控與滑動、[content.c](../../src/content.c) 掛語料、
+[shrine_screen.c](../../src/shrine_screen.c) 正殿、[stub_screen.c](../../src/stub_screen.c) 兩個側翼空殼、
+[error_screen.c](../../src/error_screen.c) 語料錯誤。
+
+M2 要做的第一件事是把 §4 導覽圖裡「正殿 → 問事 → 稟告／求籤」那條主軸接起來——
+目前正殿點擊是直接進擲筊，那是 M1 為了維持「擲筊行為不變」的臨時接法。
+
+**正殿的神像與神龕現在是 LVGL 幾何佔位造型，不是美術**。換成真圖只要改
+`shrine_screen.c` 的 `build_screen()`，導覽與香煙動畫不受影響。
 
 ### 已知的優化方向（依 S4 的實測修正）
 

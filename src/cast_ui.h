@@ -8,6 +8,9 @@
 
 esp_err_t cast_ui_init(void);
 
+// 把這個畫面推上前景。由 cast_screen 的 enter() 呼叫
+void cast_ui_show(void);
+
 // 播一次擲筊動畫。鏡頭拉近後就停在該筊象上，不會自己收掉
 void cast_ui_play(cast_result_t r);
 
