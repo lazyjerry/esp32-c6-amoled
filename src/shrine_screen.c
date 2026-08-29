@@ -10,6 +10,7 @@
 
 #include "board.h"
 #include "bow_screen.h"
+#include "esp_random.h"
 #include "cast_screen.h"
 #include "esp_lvgl_port.h"
 #include "lvgl.h"
@@ -34,14 +35,35 @@ LV_FONT_DECLARE(font_zh_16)
 #define CENSER_H 48
 #define CENSER_Y 352          // 香爐頂緣的 y
 
-#define PUFFS      5
-#define SMOKE_RISE 160        // 香煙上升的高度
+// 三支線香插在香灰裡。爐子自己不會冒煙——煙是從香頭燒出來的，
+// 起點要在香的頂端而不是爐口。
+//
+// 每次進正殿三支各自抽一個長度：香本來就不會燒得一樣快，三支等長反而假。
+// 這裡只是隨機，不對照香譜——那需要一份逐譜核對過的長短資料，沒有就不做。
+#define INCENSE_N      3
+#define INCENSE_W      5
+#define INCENSE_LEVELS 4      // 長度等級
+#define INCENSE_STEP   14     // 每一級差多少
+#define INCENSE_SHOW   74     // 最短那一級露出爐口的長度
+// 只沒入爐口一小段。埋太深會蓋到爐身上的字——爐口就是視覺上香消失的地方，
+// 真正的香灰在爐裡本來就看不見
+#define INCENSE_SINK 10
+#define INCENSE_TIP  4        // 頂端的燃點
+#define INCENSE_GAP  20       // 三支之間的間距
+
+#define PUFFS      6          // 三支香各分兩縷，太少會看得出是同一顆在繞
+#define SMOKE_RISE 120        // 香煙上升的高度。從香頭起算，再高就頂到匾額了
 #define SMOKE_DRIFT 26        // 左右飄移的振幅
 #define SMOKE_STEP 14         // 每幀的相位增量（滿相位 1000）
 #define SMOKE_MS   50
 
 static lv_obj_t *s_scr;
+static lv_obj_t *s_stick[INCENSE_N];
+static lv_obj_t *s_stick_tip[INCENSE_N];
 static lv_obj_t *s_puff[PUFFS];
+// 每縷煙固定屬於某一支香，起點才不會在三支之間跳
+static int32_t s_puff_x[PUFFS];
+static int32_t s_puff_y[PUFFS];
 static int32_t s_phase[PUFFS];
 static lv_timer_t *s_timer;
 
@@ -55,6 +77,12 @@ static void on_click(lv_event_t *e)
     s_goto_ritual = true;
 }
 
+// 第 i 支香的 x（中心）
+static int32_t incense_x(int i)
+{
+    return BOARD_LCD_H_RES / 2 + (i - INCENSE_N / 2) * INCENSE_GAP;
+}
+
 static void smoke_tick(lv_timer_t *t)
 {
     (void)t;
@@ -63,15 +91,16 @@ static void smoke_tick(lv_timer_t *t)
         if (s_phase[i] >= 1000) s_phase[i] -= 1000;
 
         int32_t p = s_phase[i];
-        int32_t y = CENSER_Y - p * SMOKE_RISE / 1000;
-        // 越高越淡、越大、飄得越開，才像煙而不像一串珠子
-        int32_t size = 9 + p * 15 / 1000;
-        int32_t opa = 150 - p * 150 / 1000;
+        int32_t y = s_puff_y[i] - p * SMOKE_RISE / 1000;
+        // 越高越淡、越大、飄得越開，才像煙而不像一串珠子。
+        // 起手比原本小：從一支香冒出來的煙，一開始只有香那麼細
+        int32_t size = 5 + p * 16 / 1000;
+        int32_t opa = 140 - p * 140 / 1000;
         int32_t angle = (p * 2 + i * 700) % 3600;
         int32_t dx = lv_trigo_sin(angle) * SMOKE_DRIFT * p / (32767 * 1000);
 
         lv_obj_set_size(s_puff[i], size, size);
-        lv_obj_set_pos(s_puff[i], BOARD_LCD_H_RES / 2 - size / 2 + dx, y);
+        lv_obj_set_pos(s_puff[i], s_puff_x[i] - size / 2 + dx, y);
         lv_obj_set_style_bg_opa(s_puff[i], opa, 0);
     }
 }
@@ -139,11 +168,12 @@ static void build_screen(void)
     lv_obj_set_style_radius(head, LV_RADIUS_CIRCLE, 0);
     lv_obj_align(head, LV_ALIGN_TOP_MID, 0, NICHE_Y + 48);
 
-    // 香煙要在香爐與供桌之前建，煙才會從爐口後面冒出來
+    // 每縷煙固定綁一支香。相位平均錯開，同一支的兩縷就會一前一後而不是疊在一起
     for (int i = 0; i < PUFFS; i++) {
         s_puff[i] = plain_box(s_scr, 10, 10, 0xB0B0B0, 0);
         lv_obj_set_style_radius(s_puff[i], LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_opa(s_puff[i], 0, 0);
+        s_puff_x[i] = incense_x(i % INCENSE_N);
         s_phase[i] = i * (1000 / PUFFS);
     }
 
@@ -166,7 +196,17 @@ static void build_screen(void)
     lv_obj_set_style_text_font(censer_text, &font_zh_16, 0);
     lv_obj_set_style_text_color(censer_text, lv_color_hex(0x3A2410), 0);
     lv_label_set_text(censer_text, "有求必應");
-    lv_obj_center(censer_text);
+    // 往爐身下半擺，讓出上緣給插香的位置
+    lv_obj_align(censer_text, LV_ALIGN_CENTER, 0, 8);
+
+    // 三支線香。先畫香身，燃點另外疊一小段在頂端。長度在 enter() 才決定
+    for (int i = 0; i < INCENSE_N; i++) {
+        s_stick[i] = plain_box(s_scr, INCENSE_W, INCENSE_SHOW, 0x7A5636, 0);
+        lv_obj_set_style_radius(s_stick[i], 1, 0);
+
+        s_stick_tip[i] = plain_box(s_scr, INCENSE_W, INCENSE_TIP, 0xE0621C, 0);
+        lv_obj_set_style_radius(s_stick_tip[i], 1, 0);
+    }
 
     // 爐耳，兩側各一個，讓它不只是一個方塊
     for (int i = 0; i < 2; i++) {
@@ -181,11 +221,29 @@ static void build_screen(void)
     lv_timer_pause(s_timer);
 }
 
+// 每次進正殿重抽三支香的長度，順便把每縷煙的起點移到自己那支香的香頭
+static void randomize_incense(void)
+{
+    for (int i = 0; i < INCENSE_N; i++) {
+        int32_t show = INCENSE_SHOW + (int32_t)(esp_random() % INCENSE_LEVELS) * INCENSE_STEP;
+        int32_t tip_y = CENSER_Y - show;
+        int32_t x = incense_x(i) - INCENSE_W / 2;
+
+        // 香身連同沒入爐口的那一截一起畫，爐子會蓋住下半
+        lv_obj_set_size(s_stick[i], INCENSE_W, show + INCENSE_SINK);
+        lv_obj_set_pos(s_stick[i], x, tip_y);
+        lv_obj_set_pos(s_stick_tip[i], x, tip_y);
+
+        for (int k = i; k < PUFFS; k += INCENSE_N) s_puff_y[k] = tip_y;
+    }
+}
+
 static esp_err_t enter(void)
 {
     s_goto_ritual = false;
     lvgl_port_lock(0);
     if (!s_scr) build_screen();
+    randomize_incense();
     screen_load(s_scr);
     lv_timer_resume(s_timer);
     lvgl_port_unlock();

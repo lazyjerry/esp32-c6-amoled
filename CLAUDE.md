@@ -126,7 +126,7 @@ IDF 6.0 起 cJSON 不再內建，改吃 `espressif/cjson`。
 |------|------|
 | [display.c](src/display.c) | 起 LVGL 與面板，與任何單一畫面無關 |
 | [content.c](src/content.c) | 掛 storage 分區的 SPIFFS，並確認 `poems.json` 讀得到 |
-| [shrine_screen.c](src/shrine_screen.c) | 正殿。**神像與神龕是 LVGL 幾何佔位造型，不是美術**；香煙是 120×160 局部動畫 |
+| [shrine_screen.c](src/shrine_screen.c) | 正殿。**神像與神龕是 LVGL 幾何佔位造型，不是美術**；爐上插三支線香、每次進來各自隨機四級長度，煙從各自的香頭飄起（局部動畫） |
 | [error_screen.c](src/error_screen.c) | 語料掛不起來時的死路畫面。刻意不退回擲筊 |
 | [cast_screen.c](src/cast_screen.c) | 擲筊，包住既有的 `cast_ui.c`。求籤後進來是**確認模式**，依筊象決定去向 |
 | [records.c](src/records.c) | 參拜紀錄存 NVS：序號 + 類別 + 籤號，環形保留最近 20 筆，另加只增不減的累計統計。**不存日期** |
