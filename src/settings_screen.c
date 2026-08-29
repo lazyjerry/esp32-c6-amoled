@@ -7,11 +7,16 @@
 // 拖動即時套用、放開才寫 NVS——拖一次會經過幾十個中間值，每一格都寫 flash
 // 只是在磨損 NVS，而聽得到、看得到本來就不需要等寫入完成。
 //
-// 事件回呼跑在 LVGL 任務裡，那裡已經持有 LVGL 鎖，
-// 所以寫面板亮度暫存器（與畫面資料共用 QSPI）不必也不能再上一次鎖。
+// 亮度**不在事件回呼裡套用**。面板暫存器與畫面資料共用同一條 QSPI，
+// 在 LVGL 回呼裡寫 0x51 時 LVGL 可能正把畫面推上去——指令會回報成功但面板不理，
+// 實測就是拖了完全沒反應。改成回呼只記下要調到多少，由主迴圈的 tick() 拿著
+// LVGL 鎖去寫，和「畫面切換一律在主迴圈做」是同一條規矩。
+//
+// 音量沒有這個問題：codec 走 I2C，與面板不同一條匯流排，在回呼裡直接設就好。
 #include "settings_screen.h"
 
 #include "audio.h"
+#include "esp_log.h"
 #include "board.h"
 #include "esp_lvgl_port.h"
 #include "lvgl.h"
@@ -28,6 +33,8 @@ LV_FONT_DECLARE(font_zh_16)
 #define CELL_H   18
 #define CELL_GAP 4
 
+static const char *TAG = "settings-ui";
+
 #define CELL_ON  0xE8C880
 #define CELL_OFF 0x3A2018
 
@@ -42,6 +49,9 @@ typedef struct {
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_batt;
+// 回呼與主迴圈都會碰：-1 表示沒有待套用的值
+static volatile int32_t s_pending_bright = -1;
+static volatile bool s_store_bright;
 static bar_t s_vol;
 static bar_t s_bright;
 
@@ -163,12 +173,13 @@ static void store_volume(int32_t v)
 
 static void apply_brightness(int32_t v)
 {
-    board_display_brightness((uint8_t)v);
+    s_pending_bright = v;
 }
 
 static void store_brightness(int32_t v)
 {
-    settings_set_brightness((uint8_t)v);
+    s_pending_bright = v;
+    s_store_bright = true;
 }
 
 static void build_screen(void)
@@ -224,6 +235,24 @@ static esp_err_t enter(void)
     return ESP_OK;
 }
 
+// 主迴圈每輪一次。面板亮度只在這裡寫
+static void tick(void)
+{
+    int32_t v = s_pending_bright;
+    if (v < 0) return;
+    s_pending_bright = -1;
+
+    lvgl_port_lock(0);
+    esp_err_t err = board_display_brightness((uint8_t)v);
+    lvgl_port_unlock();
+    if (err != ESP_OK) ESP_LOGW(TAG, "亮度 %d 寫入失敗：%s", (int)v, esp_err_to_name(err));
+
+    if (s_store_bright) {
+        s_store_bright = false;
+        settings_set_brightness((uint8_t)v);
+    }
+}
+
 static bool on_event(screen_event_t ev)
 {
     switch (ev) {
@@ -244,6 +273,6 @@ const screen_t settings_screen = {
     .name = "設定",
     .enter = enter,
     .exit = NULL,
-    .tick = NULL,
+    .tick = tick,
     .on_event = on_event,
 };

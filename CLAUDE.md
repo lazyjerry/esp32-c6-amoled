@@ -172,12 +172,14 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 見 [docs/notes/pio-does-not-build-or-flash-spiffs.md](docs/notes/pio-does-not-build-or-flash-spiffs.md)。
 
 **畫面上出現豆腐方塊 = 字型子集漏字。** 全形空白 `U+3000`、全形逗號 `U+FF0C` 這種標點也要收，改字串就要回頭改 `gen-font.sh` 的字集再重產。
+字集變數（`*_CHARS`）由 `gen-font.sh` 自己 `compgen` 收齊，新增一組不必再去改別的地方——
+手寫清單漏掉新變數時，`check-glyphs.sh` 因為是自動掃描而照樣放行，字就這樣悄悄漏掉了。
 
 天氣看板的 [net.c](src/net.c)／[weather.c](src/weather.c)／[ui.c](src/ui.c) 與 [config.sh](scripts/config.sh) 都保留著但已不進入，`main.c` 沒有引用它們。
 
 ## 已驗證可用
 
-- **顯示**：SH8601 QSPI，368×448 RGB565。裸繪時色值需手動 byte-swap（紅是 `0x00F8`）；走 LVGL 則由 `flags.swap_bytes` 處理
+- **顯示**：SH8601 QSPI，368×448 RGB565。裸繪時色值需手動 byte-swap（紅是 `0x00F8`）；走 LVGL 則由 `flags.swap_bytes` 處理。**自己送面板指令要組成 `opcode(0x02)<<24 | 指令<<8`**，兩段缺一就靜默無效（回 `ESP_OK` 但面板不理），見 [筆記](docs/notes/sh8601-qspi-cmd-needs-opcode.md)
 - **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。[src/touch.c](src/touch.c) 把它接成 LVGL 指標裝置並自寫左右滑動判定；座標與面板 368×448 為 1:1，不需縮放或鏡射。**滑動判定成立時要 `lv_indev_reset()` 取消該次觸碰**，否則滑過按鈕等於按下去，見 [筆記](docs/notes/touch-swipe-must-cancel-lvgl-press.md)。擲筊本身沒用到觸控
 - **LVGL 9**：esp_lvgl_port，368×64 雙緩衝（擲筊沒有網路，緩衝可以比天氣看板大一倍）
 - **IMU**：QMI8658 加速度計，`±8g` 檔位 4096 LSB/g，靜置合力實測 1.00~1.07 g。見 [docs/notes/qmi8658-accel-minimal-bringup.md](docs/notes/qmi8658-accel-minimal-bringup.md)

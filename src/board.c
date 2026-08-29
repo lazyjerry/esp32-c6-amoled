@@ -252,9 +252,15 @@ esp_err_t board_display_on(bool on)
     return esp_lcd_panel_disp_on_off(s_panel, on);
 }
 
+// QSPI 的一次寫入是 32 bit：opcode(0x02) << 24 | 指令 << 8 | 位址。
+// 指令要往左挪 8 位，不是擺在最低的那個 byte——擺錯位置和完全不送是一樣的結果：
+// SPI 傳輸照樣成功、函式照樣回 ESP_OK，面板卻收不到有效指令。
+// 這是 esp_lcd_sh8601 元件內部 tx_param() 與官方 BSP 的同一段算式
+#define LCD_CMD_WRITE(cmd) ((((uint32_t)(cmd) & 0xFF) << 8) | (0x02UL << 24))
+
 esp_err_t board_display_brightness(uint8_t level)
 {
-    return esp_lcd_panel_io_tx_param(s_io, 0x51, &level, 1);
+    return esp_lcd_panel_io_tx_param(s_io, LCD_CMD_WRITE(0x51), &level, 1);
 }
 
 void board_display_fade(uint8_t from, uint8_t to, uint32_t ms)

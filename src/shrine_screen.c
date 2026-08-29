@@ -19,6 +19,7 @@
 #include "settings_screen.h"
 
 LV_FONT_DECLARE(font_zh_28)
+LV_FONT_DECLARE(font_zh_16)
 
 #define PILLAR_W 26           // 兩側廊柱
 #define PLAQUE_W 250          // 匾額
@@ -117,7 +118,7 @@ static void build_screen(void)
     lv_obj_t *plaque_text = lv_label_create(plaque);
     lv_obj_set_style_text_font(plaque_text, &font_zh_28, 0);
     lv_obj_set_style_text_color(plaque_text, lv_color_hex(0xE8C060), 0);
-    lv_label_set_text(plaque_text, "有求必應");
+    lv_label_set_text(plaque_text, "成功廟");
     lv_obj_center(plaque_text);
 
     // 神龕：外框金邊，內裡壓暗，神像才浮得出來
@@ -159,6 +160,13 @@ static void build_screen(void)
     lv_obj_t *censer = plain_box(s_scr, CENSER_W, CENSER_H, 0x6A4A28, 0x9A7838);
     lv_obj_set_style_radius(censer, 8, 0);
     lv_obj_set_pos(censer, BOARD_LCD_H_RES / 2 - CENSER_W / 2, CENSER_Y);
+
+    // 爐身上的字。深色壓在銅色爐身上，像鑄上去的，不該比匾額搶眼
+    lv_obj_t *censer_text = lv_label_create(censer);
+    lv_obj_set_style_text_font(censer_text, &font_zh_16, 0);
+    lv_obj_set_style_text_color(censer_text, lv_color_hex(0x3A2410), 0);
+    lv_label_set_text(censer_text, "有求必應");
+    lv_obj_center(censer_text);
 
     // 爐耳，兩側各一個，讓它不只是一個方塊
     for (int i = 0; i < 2; i++) {

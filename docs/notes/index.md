@@ -25,6 +25,7 @@
 |------|----------|------|------|
 | [esp_codec_dev 的 I2S 資料層只收偶數聲道，單聲道音源要自己攤成兩個 slot](esp-codec-dev-needs-even-channels.md) | 用 espressif/esp_codec_dev 播單聲道 PCM，esp_codec_dev_open 直接回失敗時 | sample_info 的 channel 必須是偶數，填 1 會被擋掉。另外 audio_codec_i2c_cfg_t 的 addr 是 8 位元寫入位址（ES8311 填 0x30，匯流排上看到的是 0x18），且在 IDF 5.3 以上要填 bus_handle 才會走新的 i2c_master 驅動。 | 生效 |
 | [QMI8658 只用加速度計的最小啟動：CTRL1 沒開位址自動遞增就讀不到連續六個位元組](qmi8658-accel-minimal-bringup.md) | 要在本板讀 QMI8658 三軸加速度，或連讀 0x35 起六個 byte 拿到重複／錯位的值時 | 三行暫存器就能跑：CTRL1=0x40 開 ADDR_AI、CTRL2=0x26 設 ±8g/125Hz、CTRL7=0x01 開加速度計。±8g 是 4096 LSB/g，小端。驗收看靜置合力是不是 1g，不對就是量程或位元組序設錯。 | 生效 |
+| [SH8601 QSPI：自己送面板指令要「指令 <<8 再帶 0x02 opcode」，組錯就靜默無效](sh8601-qspi-cmd-needs-opcode.md) | 執行期寫面板暫存器（亮度 0x51 之類）沒反應，但函式回 ESP_OK | QSPI 的 32 bit 寫入是 opcode(0x02)<<24 \| 指令<<8 \| 位址。指令要往左挪 8 位，只補 opcode 而把指令留在最低 byte 一樣無效。組錯時 SPI 傳輸照樣成功、回 ESP_OK，面板卻收不到有效指令。走 esp_lcd_sh8601 元件的路徑都對，只有直接呼叫 esp_lcd_panel_io_tx_param 要自己組。 | 生效 |
 | [SH8601 全螢幕傳輸實測：分段越大越快，64 列是 RAM 與速度的平衡點](sh8601-qspi-fullscreen-throughput.md) | 要估算 SH8601／QSPI AMOLED 的畫面更新速度，或在調 LVGL 繪圖緩衝大小、找動畫掉幀原因時 | 368x448 RGB565（329,728 bytes）裸繪實測：16 列一段 44ms、32 列 41ms、64 列 32ms、112 列 28ms——每段都有固定的指令與位址開銷，分段越大越省。64 列雙緩衝 94KB 換到 31fps，再往上收益遞減。全螢幕理論上限 31fps 而擲筊動畫只有 21fps，代表瓶頸在 LVGL 算圖不在傳輸。 | 生效 |
 | [本板觸控只是位址相同，不是真 FT5x06；套官方元件會把晶片寫到不回應 I2C](touch-not-real-ft5x06.md) | 要整合本板觸控、或看到 esp_lcd_touch_ft5x06 初始化後出現 I2C hardware timeout detected 時 | 觸控在 0x38 應答、vendor id(0xA3)=0x64，但暫存器語意與 FT5x06 不同。espressif/esp_lcd_touch_ft5x06 的 init 會寫入 8 個 FT5x06 電源管理暫存器（含 2 秒進 Monitor 模式），寫完晶片就停止回應 I2C。改成直接讀 0x02~0x06 五個 byte 即可，不需任何觸控元件。 | 生效 |
 | [自寫觸控 swipe 要用 lv_indev_reset 取消該次觸碰，否則滑過按鈕就等於按下去](touch-swipe-must-cancel-lvgl-press.md) | 要在本板做觸控滑動換頁、或滑動時發現底下的按鈕被誤觸時 | 本板觸控只能裸讀單點座標，滑動要自己判。判定成立的當下必須呼叫 lv_indev_reset(indev, NULL)，否則手指抬起時 LVGL 仍會補一次 CLICKED。座標與面板 368x448 為 1:1，不需縮放也不需鏡射。 | 生效 |
@@ -49,7 +50,7 @@
 
 | 筆記 | 觸發時機 | 摘要 | 狀態 |
 |------|----------|------|------|
-| [LVGL 回呼裡不要切畫面，也不要在 exit() 刪掉正在顯示的畫面](lvgl-screen-switch-from-main-loop.md) | 要用 screen_mgr 做多畫面切換、或畫面切換後當機／畫面全黑時 | 畫面切換一律在主迴圈做：LVGL 事件回呼只設旗標，由該畫面的 tick() 執行 screen_mgr_goto()。畫面物件建一次就快取，不要在 exit() 刪除——exit() 早於下一個畫面的 enter()，刪掉的正是當下顯示中的那一個。 | 生效 |
+| [LVGL 回呼裡不要切畫面，也不要在 exit() 刪掉正在顯示的畫面](lvgl-screen-switch-from-main-loop.md) | 要用 screen_mgr 做多畫面切換、或畫面切換後當機／畫面全黑時 | 畫面切換一律在主迴圈做：LVGL 事件回呼只設旗標，由該畫面的 tick() 執行 screen_mgr_goto()。寫面板暫存器（亮度 0x51）同樣要留給主迴圈——在回呼裡寫會回報成功但面板不理。畫面物件建一次就快取，不要在 exit() 刪除——exit() 早於下一個畫面的 enter()，刪掉的正是當下顯示中的那一個。 | 生效 |
 | [SH8601 接 LVGL 9：偶奇對齊要掛 INVALIDATE_AREA 事件，v8 的 rounder_cb 已移除](sh8601-lvgl9-area-rounding.md) | 在 SH8601／QSPI AMOLED 上整合 LVGL 9，畫面出現斜切、撕裂或位移時 | SH8601 要求繪圖區起點偶數、終點奇數，LVGL 預設不會對齊。LVGL 9 拿掉了 v8 的 rounder_cb，改用 lv_display_add_event_cb 監聽 LV_EVENT_INVALIDATE_AREA 修改 lv_area_t。另需 esp_lvgl_port 的 flags.swap_bytes 才有正確顏色。 | 生效 |
 
 ## toolchain

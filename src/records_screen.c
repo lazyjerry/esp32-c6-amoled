@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "cast.h"
+#include "esp_log.h"
 #include "esp_lvgl_port.h"
 #include "lvgl.h"
 #include "reading_screen.h"
@@ -21,6 +22,8 @@
 
 LV_FONT_DECLARE(font_zh_28)
 LV_FONT_DECLARE(font_zh_16)
+
+static const char *TAG = "records-ui";
 
 #define PAD 20
 // 求中的籤最多列幾支。超過就是次數最少的那些看不到，
@@ -133,6 +136,9 @@ static void fill_body(void)
     lv_obj_clean(s_body);
 
     const stats_t *st = records_stats();
+    ESP_LOGI(TAG, "統計：參拜 %u、擲筊 %u、聖 %u 笑 %u 陰 %u 立 %u",
+             (unsigned)st->worships, (unsigned)st->casts, (unsigned)st->sheng,
+             (unsigned)st->xiao, (unsigned)st->yin, (unsigned)st->li);
 
     if (st->worships == 0 && st->casts == 0) {
         lv_obj_t *empty = make_label(&font_zh_16, 0x6A5A48);

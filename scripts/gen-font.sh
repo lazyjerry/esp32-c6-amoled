@@ -34,6 +34,8 @@ UI_CHARS='天氣溫度濕體感風速更新連線中失敗休眠電池未取得�
 ERR_CHARS='語料未燒錄接上執行'
 # 導覽：正殿的兩個側翼（stub_screen.c）
 NAV_CHARS='參拜簿尚開放'
+# 正殿的匾額與香爐（shrine_screen.c）
+SHRINE_CHARS='成功廟有求必應'
 # 參拜簿統計（records_screen.c）
 STAT_CHARS='累計統稟告求中的擲筊聖笑陰立次數參拜簿尚無紀錄回'
 # 設定頁（settings_screen.c）
@@ -60,6 +62,14 @@ if [ "$USE_CORPUS" -eq 1 ]; then
     fi
 fi
 
+# 把所有 *_CHARS 變數收齊。這裡刻意不手寫清單——check-glyphs.sh 是自動掃描
+# 所有 *_CHARS，兩邊規則一旦不同步，新增的字集會漏進不了字型而守門還是放行，
+# 畫面上就是豆腐方塊。實際發生過：STAT/SETTING/RECORD 三組字全部漏掉。
+ALL_CHARS=""
+for _v in $(compgen -v | grep '_CHARS$'); do
+    ALL_CHARS+="${!_v}"
+done
+
 # 逐字去重。macOS 的 en_US.UTF-8 對 CJK 沒有 collation 權重，sort -u／awk 比較
 # 會把不同的中文字判定相等而靜默丟字，改用 python 逐 code point 處理。
 SYMBOLS="$(python3 -c '
@@ -67,7 +77,7 @@ import sys
 s = sys.argv[1]
 seen = {}
 sys.stdout.write("".join(seen.setdefault(c, c) for c in s if c not in seen))
-' "${UI_CHARS}${ERR_CHARS}${NAV_CHARS}${RITUAL_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
+' "${ALL_CHARS}${EXTRA}")"
 
 gen() {
     local name="$1" size="$2" bpp="$3" symbols="$4" ranges="$5"

@@ -65,8 +65,8 @@ static void dispatch_boot_key(void)
     if (!held) screen_mgr_dispatch(SCREEN_EV_BOOT_KEY);
 }
 
-// LVGL 起來後，面板暫存器和畫面資料共用同一條 QSPI。
-// 不先拿走 LVGL 的鎖就寫亮度，指令會回報成功但面板不理，畫面完全不動
+// LVGL 起來後，面板暫存器和畫面資料共用同一條 QSPI，寫亮度前要先拿走 LVGL 的鎖，
+// 不然兩邊會同時用同一條匯流排
 static void fade(uint8_t from, uint8_t to, uint32_t ms)
 {
     lvgl_port_lock(0);
