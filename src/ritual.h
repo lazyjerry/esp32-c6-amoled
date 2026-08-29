@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 // 稟告的類別。順序就是選單上的排列順序
 typedef enum {
@@ -28,3 +29,8 @@ ritual_cat_t ritual_category(void);
 
 void ritual_set_poem(int no);
 int ritual_poem(void);   // 0 表示還沒求籤
+
+// 神明應允（聖筊）時把這一次寫進參拜紀錄，回傳是第幾次。
+// 呼叫的人不必認識 records——擲筊畫面只知道「神明允了」這件事
+uint16_t ritual_commit(void);
+uint16_t ritual_seq(void);   // 這一次的序號，0 表示還沒記下來

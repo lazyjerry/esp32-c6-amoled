@@ -10,6 +10,7 @@
 #include "cast_ui.h"
 #include "draw_screen.h"
 #include "reading_screen.h"
+#include "ritual.h"
 #include "screen_mgr.h"
 #include "shrine_screen.h"
 #include "esp_log.h"
@@ -55,6 +56,9 @@ static void clear_result(const char *why)
     // 那一閃看起來像在叫人再擲一次。畫面留在結果上直到下一輪 tick 換走，
     // 待機狀態改在 enter() 復原
     if (s_confirm && (s_last_result == CAST_SHENG || s_last_result == CAST_YIN)) {
+        // 神明應允的那一刻就是這次參拜完成的時間點，紀錄記在這裡。
+        // 記在解籤閣會漏掉「求到籤但沒讀完就離開」的那些
+        if (s_last_result == CAST_SHENG) ritual_commit();
         s_pending_goto = (s_last_result == CAST_SHENG) ? &reading_screen : &draw_screen;
         ESP_LOGI(TAG, "%s：%s，直接進「%s」", why, cast_result_name(s_last_result),
                  s_pending_goto->name);

@@ -5,10 +5,12 @@
 // 還沒寫到的籤就只顯示籤詩本文。來源網站的語譯與籤意是該站著作，一律不收錄。
 //
 // 捲動走 LVGL 原生的：容器設成可捲動，觸控 indev 的連續座標就會帶著它捲。
-// 左右滑動不接——閱讀時橫向手抖很容易誤觸，要離開走底部的按鈕或 BOOT。
+// 左右滑動不接——閱讀時橫向手抖很容易誤觸。讀完按「禮畢」走收尾頁，
+// 長按 BOOT 則是中途離開，直接回正殿、不經過禮畢。
 #include "reading_screen.h"
 
 #include "content.h"
+#include "end_screen.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -94,7 +96,7 @@ static void build_screen(void)
     lv_obj_t *label = lv_label_create(btn);
     lv_obj_set_style_text_font(label, &font_zh_16, 0);
     lv_obj_set_style_text_color(label, lv_color_hex(0xE0C890), 0);
-    lv_label_set_text(label, "回正殿");
+    lv_label_set_text(label, "禮畢");
     lv_obj_center(label);
 }
 
@@ -143,7 +145,7 @@ static void tick(void)
 {
     if (s_leave) {
         s_leave = false;
-        screen_mgr_goto(&shrine_screen);
+        screen_mgr_goto(&end_screen);
     }
 }
 

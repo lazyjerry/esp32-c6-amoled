@@ -1,10 +1,8 @@
-// 兩個側翼的空殼：參拜簿與設定。內容分別在 M3、M4 才填。
+// 設定畫面的空殼，內容在 M4 才填。
 //
-// 兩支共用同一份實作，差別只有標題——這階段要驗的是導覽進得去出得來，
-// 為此各寫一支只會讓「滑動切換」這件事的錯誤散在兩個地方。
+// 參拜簿本來也共用這支，M3 有了真的紀錄之後搬去 records_screen.c。
 #include "esp_lvgl_port.h"
 #include "lvgl.h"
-#include "records_screen.h"
 #include "screen_mgr.h"
 #include "settings_screen.h"
 #include "shrine_screen.h"
@@ -17,7 +15,6 @@ typedef struct {
     lv_obj_t *scr;
 } stub_t;
 
-static stub_t s_records  = {.title = "參拜簿"};
 static stub_t s_settings = {.title = "設定"};
 
 static esp_err_t enter_stub(stub_t *st)
@@ -45,10 +42,9 @@ static esp_err_t enter_stub(stub_t *st)
     return ESP_OK;
 }
 
-static esp_err_t enter_records(void)  { return enter_stub(&s_records); }
 static esp_err_t enter_settings(void) { return enter_stub(&s_settings); }
 
-// 側翼只有一條路：回正殿。滑哪一邊都回去，BOOT 也回去——
+// 側翼只有一條路：回正殿。滑哪一邊都回去，長按也回去——
 // 空殼裡沒有東西可做，讓人卡住毫無意義
 static bool on_event(screen_event_t ev)
 {
@@ -65,14 +61,6 @@ static bool on_event(screen_event_t ev)
     }
     return false;
 }
-
-const screen_t records_screen = {
-    .name = "參拜簿",
-    .enter = enter_records,
-    .exit = NULL,
-    .tick = NULL,
-    .on_event = on_event,
-};
 
 const screen_t settings_screen = {
     .name = "設定",

@@ -21,6 +21,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "imu.h"
+#include "records.h"
 #include "screen_mgr.h"
 #include "shrine_screen.h"
 #include "touch.h"
@@ -116,6 +117,10 @@ void app_main(void)
     // 觸控壞掉還有 BOOT 鍵與 IMU 可以操作，不值得讓整台開不起來
     err = touch_init();
     if (err != ESP_OK) ESP_LOGW(TAG, "觸控初始化失敗（%s），本次無觸控", esp_err_to_name(err));
+
+    // 紀錄壞掉只是留不下參拜簿，儀式本身照樣走得完
+    err = records_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "參拜紀錄初始化失敗（%s），本次不留紀錄", esp_err_to_name(err));
 
     // 語料讀不到就停在錯誤畫面，不建立擲筊畫面。
     // 讓裝置「看起來能用」只會把問題留到求到籤卻沒有籤詩的那一刻
