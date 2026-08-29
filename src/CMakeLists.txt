@@ -11,12 +11,6 @@ idf_component_register(
         driver
         esp_lcd
         esp_timer
-        esp_wifi
-        esp_netif
-        esp_event
-        esp_http_client
-        esp-tls
-        mbedtls
         nvs_flash
         # 語料放 storage 分區的 SPIFFS，內容在建置時燒進去
         spiffs

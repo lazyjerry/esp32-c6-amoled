@@ -10,7 +10,5 @@ dependencies:
   lvgl/lvgl: "~9.3.0"
   # IDF 6.0 起 cJSON 不再內建，改由元件註冊表提供
   espressif/cjson: "^1.7.19"
-  # IDF 6.0 把 wifi_provisioning 換成這個；SoftAP 配網用
-  espressif/network_provisioning: "^1.2.4"
   # ES8311 codec：擲筊音效。直接寫暫存器要抄 20 幾條初始化序列，改用官方 codec 抽象層
   espressif/esp_codec_dev: "^1.3.4"

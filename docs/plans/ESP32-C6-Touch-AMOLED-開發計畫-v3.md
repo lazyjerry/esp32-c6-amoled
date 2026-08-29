@@ -543,7 +543,17 @@ NVS 寫不進去時只是留不下紀錄，儀式照樣走得完——不該為�
 - [x] 開機淡入（M1 就有，這次改成淡到使用者設定的亮度而非寫死滿亮）
 - [x] 換頁轉場——統一 150ms 淡入，走 `screen_load()`
 - [ ] 手持狀態下重調 IMU 門檻（`SWING_G` / `SWING_HALVES` 目前只在桌上驗過）
-- [ ] 移除 `sdkconfig.defaults` 中為 Wi-Fi／TLS 準備的設定
+- [x] 移除 Wi-Fi／TLS 的殘留——連同 `net.c`／`weather.c`／`ui.c`／`config.sh` 一起刪
+
+#### Wi-Fi 殘留：刪掉的是閱讀成本，不是 flash
+
+天氣看板那三支不會被進入，但每次編譯都在編、每次讀 `src/` 都要先確認它們沒被用到。
+一併刪掉之後 flash 只少了 650 bytes（1290KB → 1289KB）——**那些程式碼本來就沒被連進韌體**，
+`main.c` 沒引用，linker 早就 GC 掉了。所以這一項的收益全在「樹上不再有不會執行的程式碼」。
+
+連帶拿掉的還有 `CMakeLists.txt` 的 `esp_wifi`／`esp_netif`／`esp_event`／`esp_http_client`／
+`esp-tls`／`mbedtls`、`idf_component.yml` 的 `network_provisioning`，以及 `sdkconfig.defaults`
+裡的 mbedTLS 緩衝、憑證組、`LV_USE_QRCODE`（配網畫面才要畫 QR）與 protocomm security v1。
 
 #### 音效：加了鐘，環境音不做
 

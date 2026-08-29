@@ -96,14 +96,19 @@ cmake / ninja / dfu-util **不需要** brew 安裝，PlatformIO 自帶，理由�
 | Flash | 16MB | [sdkconfig.defaults](sdkconfig.defaults)（不是 `board_upload.flash_size`） |
 | 分區 | app 6MB + storage 9MB | [partitions.csv](partitions.csv)——2026-08-29 由 4M/11M 調整，壓力在 app 不在 storage |
 | Console | USB Serial/JTAG | `sdkconfig.defaults`（UART0 在本板沒接出來） |
-| 外部元件 | `esp_lcd_sh8601` / `esp_lvgl_port` / `lvgl` / `cjson` / `network_provisioning` / `esp_codec_dev` | [src/idf_component.yml](src/idf_component.yml)，走 IDF component manager 而非 `lib_deps` |
+| 外部元件 | `esp_lcd_sh8601` / `esp_lvgl_port` / `lvgl` / `cjson` / `esp_codec_dev` | [src/idf_component.yml](src/idf_component.yml)，走 IDF component manager 而非 `lib_deps` |
 | 元件相依 | 手動列在 `REQUIRES` | [src/CMakeLists.txt](src/CMakeLists.txt)——這個元件不叫 `main`，IDF 不會自動掛上全部元件 |
 
 改了 `sdkconfig.defaults` 要刪掉 `sdkconfig.esp32-c6-devkitc-1` 重生；改了 `idf_component.yml` 要 `rm -rf .pio/build`。兩者都有筆記。
 
 `lvgl` 釘在 `~9.3.0`：下限是 `esp_lvgl_port` 2.9 要用的 `LV_COLOR_FORMAT_RGB565_SWAPPED`，上限是沒驗過更新版和 `lv_font_conv` 產出的字型結構。
 
-IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`）、`wifi_provisioning` 改名 `espressif/network_provisioning`（API 前綴 `network_prov_*`）。另外 protocomm 預設只開 security v2，PoP 流程要的 v1 得自己在 `sdkconfig.defaults` 打開。
+IDF 6.0 起 cJSON 不再內建，改吃 `espressif/cjson`。
+
+**天氣看板的程式碼（`net.c`／`weather.c`／`ui.c`／`config.sh`）已於 2026-08-29 刪除**，
+連同 `esp_wifi`／`esp-tls`／`mbedtls`／`network_provisioning` 的相依與 sdkconfig 設定。
+要回頭做連網功能得從 git 歷史挖回來。刪除幾乎不省 flash（1290KB → 1289KB）——
+那些程式碼本來就沒被呼叫，linker 早就 GC 掉了；換到的是不必再讀一份不會執行的程式碼。
 
 ## 應用：掌上宮廟
 
@@ -175,7 +180,6 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 字集變數（`*_CHARS`）由 `gen-font.sh` 自己 `compgen` 收齊，新增一組不必再去改別的地方——
 手寫清單漏掉新變數時，`check-glyphs.sh` 因為是自動掃描而照樣放行，字就這樣悄悄漏掉了。
 
-天氣看板的 [net.c](src/net.c)／[weather.c](src/weather.c)／[ui.c](src/ui.c) 與 [config.sh](scripts/config.sh) 都保留著但已不進入，`main.c` 沒有引用它們。
 
 ## 已驗證可用
 
