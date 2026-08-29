@@ -14,6 +14,7 @@
 #define I2C_SCL 7
 
 #define TCA9554_ADDR   0x20
+#define TCA9554_INPUT  0x00
 #define TCA9554_OUTPUT 0x01
 #define TCA9554_CONFIG 0x03
 #define EXIO_LCD_RST   (1 << 4)
@@ -103,6 +104,43 @@ static esp_err_t release_resets(void)
     return ESP_OK;
 }
 
+esp_err_t board_exio_dump(uint8_t *config, uint8_t *output, uint8_t *input)
+{
+    if (s_exio == NULL) return ESP_ERR_INVALID_STATE;
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_CONFIG, config), TAG, "exio cfg");
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_OUTPUT, output), TAG, "exio out");
+    return reg_read(s_exio, TCA9554_INPUT, input);
+}
+
+esp_err_t board_exio_drive(uint8_t mask, bool high)
+{
+    if (s_exio == NULL) return ESP_ERR_INVALID_STATE;
+
+    uint8_t cfg = 0, out = 0;
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_CONFIG, &cfg), TAG, "exio cfg");
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_OUTPUT, &out), TAG, "exio out");
+
+    // 先擺好輸出值再切成輸出，免得切換瞬間送出前一次的殘值
+    out = high ? (out | mask) : (out & ~mask);
+    ESP_RETURN_ON_ERROR(reg_write(s_exio, TCA9554_OUTPUT, out), TAG, "exio out");
+    return reg_write(s_exio, TCA9554_CONFIG, cfg & ~mask);
+}
+
+esp_err_t board_pmic_read(uint8_t reg, uint8_t *val)
+{
+    if (s_axp == NULL) return ESP_ERR_INVALID_STATE;
+    return reg_read(s_axp, reg, val);
+}
+
+esp_err_t board_exio_release(uint8_t mask)
+{
+    if (s_exio == NULL) return ESP_ERR_INVALID_STATE;
+
+    uint8_t cfg = 0;
+    ESP_RETURN_ON_ERROR(reg_read(s_exio, TCA9554_CONFIG, &cfg), TAG, "exio cfg");
+    return reg_write(s_exio, TCA9554_CONFIG, cfg | mask);   // config 的 1 是輸入
+}
+
 esp_err_t board_speaker_power(bool on)
 {
     if (s_exio == NULL) return ESP_ERR_INVALID_STATE;
@@ -136,7 +174,7 @@ static esp_err_t pmic_init(void)
     return reg_write(s_axp, AXP2101_INTSTS2, AXP2101_PKEY_SHORT);
 }
 
-static esp_err_t panel_init(void)
+esp_err_t board_panel_init(void)
 {
     const spi_bus_config_t spi_cfg = SH8601_PANEL_BUS_QSPI_CONFIG(
         LCD_PCLK, LCD_DATA0, LCD_DATA1, LCD_DATA2, LCD_DATA3,
@@ -164,6 +202,20 @@ static esp_err_t panel_init(void)
     return esp_lcd_panel_disp_on_off(s_panel, true);
 }
 
+esp_err_t board_panel_deinit(void)
+{
+    // 拆的順序與建的相反：面板 → panel io → bus。少拆一層，spi_bus_free 會回 ESP_ERR_INVALID_STATE
+    if (s_panel) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_del(s_panel), TAG, "panel del");
+        s_panel = NULL;
+    }
+    if (s_io) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_del(s_io), TAG, "panel io del");
+        s_io = NULL;
+    }
+    return spi_bus_free(LCD_HOST);
+}
+
 esp_err_t board_init(void)
 {
     i2c_master_bus_config_t bus_cfg = {
@@ -184,7 +236,7 @@ esp_err_t board_init(void)
         s_axp = NULL;
     }
 
-    ESP_RETURN_ON_ERROR(panel_init(), TAG, "panel");
+    ESP_RETURN_ON_ERROR(board_panel_init(), TAG, "panel");
     ESP_LOGI(TAG, "板級初始化完成，面板 %dx%d", BOARD_LCD_H_RES, BOARD_LCD_V_RES);
     return ESP_OK;
 }

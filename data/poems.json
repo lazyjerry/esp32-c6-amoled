@@ -1,0 +1,640 @@
+{
+  "schema": "poems/v2",
+  "title": "六十甲子籤",
+  "count": 63,
+  "note": "籤詩本文、干支、卦象、屬性方位屬公有領域的傳統籤譜資料。本檔不收錄 temples.tw 編寫的籤詩語譯、籤意、故事與籤解——那些是該站著作，不可內嵌進本專案；白話解讀一律由本專案離線自產。",
+  "poems": [
+    {
+      "no": 1,
+      "name": "第一籤",
+      "ganzhi": "甲子",
+      "trigram": "○○○　○○○",
+      "attr": "屬金利秋　宜其西方",
+      "text": "日出便見風雲散　光明清淨照世間　一向前途通大道　萬事清吉保平安",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/1"
+    },
+    {
+      "no": 2,
+      "name": "第二籤",
+      "ganzhi": "甲寅",
+      "trigram": "●○●　○ ●●",
+      "attr": "屬水利冬　宜其北方",
+      "text": "於今此景正當時　看看欲吐百花魁　若能遇得春色到　一洒清吉脫塵埃",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/2"
+    },
+    {
+      "no": 3,
+      "name": "第三籤",
+      "ganzhi": "甲辰",
+      "trigram": "○○○　●○●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "勸君把定心莫虛　天註衣祿自有餘　和合重重常吉慶　時來終遇得明珠",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/3"
+    },
+    {
+      "no": 4,
+      "name": "第四籤",
+      "ganzhi": "甲午",
+      "trigram": "●●●　●○○",
+      "attr": "屬金利秋　宜其西方",
+      "text": "風恬浪靜可行舟　恰是中秋月一輪　凡事不須多憂慮　福祿自有慶家門",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/4"
+    },
+    {
+      "no": 5,
+      "name": "第五籤",
+      "ganzhi": "甲申",
+      "trigram": "●○○　○●○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "只恐前途命有變　勸君作急可宜先　且守長江無大事　命逢太白守身邊",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/5"
+    },
+    {
+      "no": 6,
+      "name": "第六籤",
+      "ganzhi": "甲戌",
+      "trigram": "○●○　○○○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "風雲致雨落洋洋　天災時氣必有傷　命內此事難和合　更逢一足出外鄉",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/6"
+    },
+    {
+      "no": 7,
+      "name": "第七籤",
+      "ganzhi": "乙丑",
+      "trigram": "○○●　●○●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "雲開月出正分明　不須進退問前程　婚姻皆由天註定　和合清吉萬事成",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/7"
+    },
+    {
+      "no": 8,
+      "name": "第八籤",
+      "ganzhi": "乙卯",
+      "trigram": "○● ●　●○●",
+      "attr": "屬水利冬　宜其北方",
+      "text": "禾稻看看結成完　此事必定兩相全　回到家中寬心坐　妻兒鼓舞樂團圓",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/8"
+    },
+    {
+      "no": 9,
+      "name": "第九籤",
+      "ganzhi": "乙巳",
+      "trigram": "●●●　○○○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "龍虎相隨在深山　君爾何須背後看　不知此去相愛愉　他日與我卻無干",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/9"
+    },
+    {
+      "no": 10,
+      "name": "第十籤",
+      "ganzhi": "乙未",
+      "trigram": "●●○　●● ●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "花開結子一半枯　可惜今年汝虛度　漸漸日落西山去　勸君不用向前途",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/10"
+    },
+    {
+      "no": 11,
+      "name": "第十一籤",
+      "ganzhi": "乙酉",
+      "trigram": "●○●　●○●",
+      "attr": "屬水利冬　宜其北方",
+      "text": "靈雞漸漸見分明　凡事且看子丑寅　雲開月出照天下　郎君即便見太平",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/11"
+    },
+    {
+      "no": 12,
+      "name": "第十二籤",
+      "ganzhi": "乙亥",
+      "trigram": "●○○　●○○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "長江風浪漸漸靜　于今得進可安寧　必有貴人相扶助　凶事脫出見太平",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/12"
+    },
+    {
+      "no": 13,
+      "name": "第十三籤",
+      "ganzhi": "丙子",
+      "trigram": "●●○　○○○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "命中正逢羅孛關　用盡心機總未休　作福問神難得過　恰是行舟上高灘",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/13"
+    },
+    {
+      "no": 14,
+      "name": "第十四籤",
+      "ganzhi": "丙寅",
+      "trigram": "○●●　●○○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "財中漸漸見分明　花開花謝結子成　寬心且看月中桂　郎君即便見太平",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/14"
+    },
+    {
+      "no": 15,
+      "name": "第十五籤",
+      "ganzhi": "丙辰",
+      "trigram": "○○●　○○●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "八十原來是太公　看看晚景遇文王　目下緊事休相問　勸君且守待運通",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/15"
+    },
+    {
+      "no": 16,
+      "name": "第十六籤",
+      "ganzhi": "丙午",
+      "trigram": "○○○　●●○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "不須作福不須求　用盡心機總未休　陽世不知陰世事　官法如爐不自由",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/16"
+    },
+    {
+      "no": 17,
+      "name": "第十七籤",
+      "ganzhi": "丙申",
+      "trigram": "○○●　●○○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "舊恨重重未改為　家中禍患不臨身　須當謹防宜作福　龍蛇交會得和合",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/17"
+    },
+    {
+      "no": 18,
+      "name": "第十八籤",
+      "ganzhi": "丙戌",
+      "trigram": "●○○　○●○",
+      "attr": "屬土利年。四方皆宜",
+      "text": "君問中間此言因　看看祿馬拱前程　若得貴人多得利　和合自有兩分明",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/18"
+    },
+    {
+      "no": 19,
+      "name": "第十九籤",
+      "ganzhi": "丁丑",
+      "trigram": "●○●　●●○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "富貴由命天註定　心高必然誤君期　不然且回依舊路　雲開月出自分明",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/19"
+    },
+    {
+      "no": 20,
+      "name": "第二十籤",
+      "ganzhi": "丁卯",
+      "trigram": "●○○　●●○",
+      "attr": "屬火利夏　宜其南方",
+      "text": "前途功名未得意　只恐命內有交加　兩家必定防損失　勸君且退莫咨嗟",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/20"
+    },
+    {
+      "no": 21,
+      "name": "第二十一籤",
+      "ganzhi": "丁巳",
+      "trigram": "●○○　○○○",
+      "attr": "屬土利年　四方皆宜",
+      "text": "十方佛法有靈通　大難禍患不相同　紅日當空常照耀　還有貴人到家堂",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/21"
+    },
+    {
+      "no": 22,
+      "name": "第二十二籤",
+      "ganzhi": "丁未",
+      "trigram": "●●●　○○●",
+      "attr": "屬水利冬　宜其北方",
+      "text": "太公家業八十成　月出光輝四海明　命內自然逢大吉　茅屋中間百事亨",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/22"
+    },
+    {
+      "no": 23,
+      "name": "第二十三籤",
+      "ganzhi": "丁酉",
+      "trigram": "○○●　○●●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "欲去長江水闊茫　前途未遂運未通　如今絲綸常在手　只恐魚水不相逢",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/23"
+    },
+    {
+      "no": 24,
+      "name": "第二十四籤",
+      "ganzhi": "丁亥",
+      "trigram": "●●● ●○●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "月出光輝四海明　前途祿位見太平　浮雲掃退終無事　可保禍患不臨身",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/24"
+    },
+    {
+      "no": 25,
+      "name": "第二十五籤",
+      "ganzhi": "戊子",
+      "trigram": "●○○　○●●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "總是前途莫心勞　求神問聖枉是多　但看雞犬日過後　不須作福事如何",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/25"
+    },
+    {
+      "no": 26,
+      "name": "第二十六籤",
+      "ganzhi": "戊寅",
+      "trigram": "●○●　●○●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "選出牡丹第一枝　勸君折取莫遲疑　世間若問相知處　萬事逢春正及時",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/26"
+    },
+    {
+      "no": 27,
+      "name": "第二十七籤",
+      "ganzhi": "戊辰",
+      "trigram": "○○○　●○○",
+      "attr": "屬木利春　宜其東方",
+      "text": "君爾寬心且自由　門庭清吉家無憂　財寶自然終吉利　凡事無傷不用求",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/27"
+    },
+    {
+      "no": 28,
+      "name": "第二十八籤",
+      "ganzhi": "戊午",
+      "trigram": "●●○　○●●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "於今莫作此當時　虎落平陽被犬欺　世間凡事何難定　千山萬水也遲疑",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/28"
+    },
+    {
+      "no": 29,
+      "name": "第二十九籤",
+      "ganzhi": "戊申",
+      "trigram": "●●○　○●○",
+      "attr": "屬土利年　四方皆宜",
+      "text": "枯木可惜未逢春　如今反在暗中藏　寬心且守風霜退　還君依舊作乾坤",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/29"
+    },
+    {
+      "no": 30,
+      "name": "第三十籤",
+      "ganzhi": "戊戌",
+      "trigram": "●●●　○●○",
+      "attr": "屬木利春　宜其東方",
+      "text": "漸漸看此月中和　過後須防未得高　改變顏色前途去　凡事必定見重勞",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/30"
+    },
+    {
+      "no": 31,
+      "name": "第三十一籤",
+      "ganzhi": "己丑",
+      "trigram": "○●○　●○●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "綠柳蒼蒼正當時　任君此去作乾坤　花果結實無殘謝　福祿自有慶家門",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/31"
+    },
+    {
+      "no": 32,
+      "name": "第三十二籤",
+      "ganzhi": "己卯",
+      "trigram": "○●●　●●○",
+      "attr": "屬土利年　四方皆宜",
+      "text": "龍虎相交在門前　此事必定兩相連　黃金忽然變成鐵　何用作福問神仙",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/32"
+    },
+    {
+      "no": 33,
+      "name": "第三十三籤",
+      "ganzhi": "己巳",
+      "trigram": "○●●　○○●",
+      "attr": "屬木利春　宜其東方",
+      "text": "欲去長江水闊茫　行舟把定未遭風　戶內用心再作福　看看魚水得相逢",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/33"
+    },
+    {
+      "no": 34,
+      "name": "第三十四籤",
+      "ganzhi": "己未",
+      "trigram": "○●○●○●",
+      "attr": "屬火利夏　宜其南方",
+      "text": "危險高山行過盡　莫嫌此路有重重　若見蘭桂漸漸發　長蛇反轉變成龍",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/34"
+    },
+    {
+      "no": 35,
+      "name": "第三十五籤",
+      "ganzhi": "己酉",
+      "trigram": "●●○　●●●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "此事何須用心機　前途變怪自然知　看看此去得和合　漸漸脫出見太平",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/35"
+    },
+    {
+      "no": 36,
+      "name": "第三十六籤",
+      "ganzhi": "己亥",
+      "trigram": "○●○　○●○",
+      "attr": "屬木利春　宜其東方",
+      "text": "福如東海壽如山　君爾何須嘆苦難　命內自然逢大吉　祈保分明自平安",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/36"
+    },
+    {
+      "no": 37,
+      "name": "第三十七籤",
+      "ganzhi": "庚子",
+      "trigram": "○●●　○●●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "運逢得意身顯變　君爾身中皆有益　一向前途無難事　決意之中保清吉",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/37"
+    },
+    {
+      "no": 38,
+      "name": "第三十八籤",
+      "ganzhi": "庚寅",
+      "trigram": "●○●　●● ●",
+      "attr": "屬木利春　宜其東方",
+      "text": "名顯有意在中央　不須祈禱心自安　看看早晚日過後　即時得意在其間",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/38"
+    },
+    {
+      "no": 39,
+      "name": "第三十九籤",
+      "ganzhi": "庚辰",
+      "trigram": "○○●　●● ●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "意中若問神仙路　勸爾且退望高樓　寬心且守寬心坐　必然遇得貴人扶",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/39"
+    },
+    {
+      "no": 40,
+      "name": "第四十籤",
+      "ganzhi": "庚午",
+      "trigram": "●○●　○○○",
+      "attr": "屬土利年　四方皆宜",
+      "text": "平生富貴成祿位　君家門戶定光輝　此中必定無損失　夫妻百歲喜相隨",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/40"
+    },
+    {
+      "no": 41,
+      "name": "第四十一籤",
+      "ganzhi": "庚申",
+      "trigram": "○○●　○○○",
+      "attr": "屬木利春　宜其東方",
+      "text": "今行到此實難推　歌歌暢飲自徘徊　雞犬相聞消息近　婚姻夙世結成雙",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/41"
+    },
+    {
+      "no": 42,
+      "name": "第四十二籤",
+      "ganzhi": "庚戌",
+      "trigram": "○●○　○○●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "一重江水一重山　誰知此去路又難　任他改求終不過　是非終久未得安",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/42"
+    },
+    {
+      "no": 43,
+      "name": "第四十三籤",
+      "ganzhi": "辛丑",
+      "trigram": "●○●　○○●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "一年作事急如飛　君爾寬心莫遲疑　貴人還在千里外　音信月中漸漸知",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/43"
+    },
+    {
+      "no": 44,
+      "name": "第四十四籤",
+      "ganzhi": "辛卯",
+      "trigram": "○●●　●●●",
+      "attr": "屬木利春　宜其東方",
+      "text": "客到前途多得利　君爾何故兩相疑　雖是中間逢進退　月出光輝得運時",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/44"
+    },
+    {
+      "no": 45,
+      "name": "第四十五籤",
+      "ganzhi": "辛巳",
+      "trigram": "○●○　●●●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "花開今已結成果　富貴榮華終到老　君子小人相會合　萬事清吉莫煩惱",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/45"
+    },
+    {
+      "no": 46,
+      "name": "第四十六籤",
+      "ganzhi": "辛未",
+      "trigram": "○●●　○●○",
+      "attr": "屬土利年　四方皆宜",
+      "text": "功名得意與君顯　前途富貴喜安然　若遇一輪明月照　十五團圓光滿天",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/46"
+    },
+    {
+      "no": 47,
+      "name": "第四十七籤",
+      "ganzhi": "辛酉",
+      "trigram": "○○●　○●○",
+      "attr": "屬木利春　宜其東方",
+      "text": "君爾何須問聖跡　自己心中皆有益　於今且看月中旬　凶事脫出化成吉",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/47"
+    },
+    {
+      "no": 48,
+      "name": "第四十八籤",
+      "ganzhi": "辛亥",
+      "trigram": "○○○　●●●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "陽世作事未和同　雲遮月色正朦朧　心中意欲前途去　只恐命內運未通",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/48"
+    },
+    {
+      "no": 49,
+      "name": "第四十九籤",
+      "ganzhi": "壬子",
+      "trigram": "○○○　○●●",
+      "attr": "屬木利春　宜其東方",
+      "text": "言語雖多不可從　風雲靜處未行龍　暗中終得明消息　君爾何須問重重",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/49"
+    },
+    {
+      "no": 50,
+      "name": "第五十籤",
+      "ganzhi": "壬寅",
+      "trigram": "●○●　●○○",
+      "attr": "屬金利秋　宜其西方",
+      "text": "佛前發誓無異心　且看前途得好音　此物原來本是鐵　也能變化得成金",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/50"
+    },
+    {
+      "no": 51,
+      "name": "第五十一籤",
+      "ganzhi": "壬辰",
+      "trigram": "●●○　●●○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "東西南北不堪行　前途此事正可當　勸君把定莫煩惱　家門自有保安康",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/51"
+    },
+    {
+      "no": 52,
+      "name": "第五十二籤",
+      "ganzhi": "壬午",
+      "trigram": "●○○　●○●",
+      "attr": "屬木利春　宜其東方",
+      "text": "功名事業本由天　不須掛念意懸懸　若問中間遲與速　風雲際會在眼前",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/52"
+    },
+    {
+      "no": 53,
+      "name": "第五十三籤",
+      "ganzhi": "壬申",
+      "trigram": "○○○　○●○",
+      "attr": "屬金利秋　宜其西方",
+      "text": "看君來問心中事　積善之家慶有餘　運亨財子雙雙至　指日喜氣溢門閭",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/53"
+    },
+    {
+      "no": 54,
+      "name": "第五十四籤",
+      "ganzhi": "壬戌",
+      "trigram": "○○●　○○●",
+      "attr": "屬土利年　四方皆宜",
+      "text": "孤燈寂寂夜沉沉　萬事清吉萬事成　若逢陰中有善果　燒得好香達神明",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/54"
+    },
+    {
+      "no": 55,
+      "name": "第五十五籤",
+      "ganzhi": "癸丑",
+      "trigram": "●●○　○○●",
+      "attr": "屬木利春　宜其東方",
+      "text": "須知進退總言虛　看看發暗未必全　珠玉深藏還未變　心中但得枉徒然",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/55"
+    },
+    {
+      "no": 56,
+      "name": "第五十六籤",
+      "ganzhi": "癸卯",
+      "trigram": "●○○　●●●",
+      "attr": "屬金利秋　宜其西方",
+      "text": "病中若得苦心勞　到底完全總未遭　去後不須回頭問　心中事務盡消磨",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/56"
+    },
+    {
+      "no": 57,
+      "name": "第五十七籤",
+      "ganzhi": "癸巳",
+      "trigram": "○●●　○○○",
+      "attr": "屬水利冬　宜其北方",
+      "text": "勸君把定心莫虛　前途清吉得運時　到底中間無大事　又遇神仙守安居",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/57"
+    },
+    {
+      "no": 58,
+      "name": "第五十八籤",
+      "ganzhi": "癸未",
+      "trigram": "○○●　○●●",
+      "attr": "屬木利春　宜其東方",
+      "text": "蛇身意欲變成龍　只恐命內運未通　久病且作寬心坐　言語雖多不可從",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/58"
+    },
+    {
+      "no": 59,
+      "name": "第五十九籤",
+      "ganzhi": "癸酉",
+      "trigram": "●●●　●●○",
+      "attr": "屬金利秋　宜其西方",
+      "text": "有心作福莫遲疑　求名清吉正當時　此事必能成會合　財寶自然喜相隨",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/59"
+    },
+    {
+      "no": 60,
+      "name": "第六十籤",
+      "ganzhi": "癸亥",
+      "trigram": "●●●　○●●",
+      "attr": "屬水利冬　宜其北方",
+      "text": "月出光輝本清吉　浮雲總是蔽陰色　戶內用心再作福　當官分理便有益",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/60"
+    },
+    {
+      "no": 61,
+      "name": "頭籤",
+      "ganzhi": null,
+      "trigram": null,
+      "attr": null,
+      "text": "籤頭百事良　添油大吉昌　萬般皆如意　富貴福壽長",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/61"
+    },
+    {
+      "no": 62,
+      "name": "籤首",
+      "ganzhi": null,
+      "trigram": null,
+      "attr": null,
+      "text": "來意欲求天上福　誠心須點佛前燈　名利兩全皆大吉　平安酬謝油三斤",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/62"
+    },
+    {
+      "no": 63,
+      "name": "籤王",
+      "ganzhi": null,
+      "trigram": null,
+      "attr": null,
+      "text": "六十甲子加一枝　未來求問神先知　添丁添油增福壽　富貴榮華必佑汝",
+      "verified": true,
+      "source": "https://temples.tw/stick/fs60/63"
+    }
+  ],
+  "verified_by": "逐首程式核對 data/temples-fs60.csv（使用者提供的擷取結果），籤詩、干支、卦象、屬性方位 63/63 全數相符",
+  "verified_at": "2026-08-29"
+}

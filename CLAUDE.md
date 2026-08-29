@@ -94,7 +94,7 @@ cmake / ninja / dfu-util **不需要** brew 安裝，PlatformIO 自帶，理由�
 | 設定 | 值 | 位置 |
 |------|-----|------|
 | Flash | 16MB | [sdkconfig.defaults](sdkconfig.defaults)（不是 `board_upload.flash_size`） |
-| 分區 | app 4MB + storage 11MB | [partitions.csv](partitions.csv) |
+| 分區 | app 6MB + storage 9MB | [partitions.csv](partitions.csv)——2026-08-29 由 4M/11M 調整，壓力在 app 不在 storage |
 | Console | USB Serial/JTAG | `sdkconfig.defaults`（UART0 在本板沒接出來） |
 | 外部元件 | `esp_lcd_sh8601` / `esp_lvgl_port` / `lvgl` / `cjson` / `network_provisioning` / `esp_codec_dev` | [src/idf_component.yml](src/idf_component.yml)，走 IDF component manager 而非 `lib_deps` |
 | 元件相依 | 手動列在 `REQUIRES` | [src/CMakeLists.txt](src/CMakeLists.txt)——這個元件不叫 `main`，IDF 不會自動掛上全部元件 |
@@ -127,8 +127,18 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 ./scripts/gen-sprites.sh [--color 8A4028]      # → src/sprites/*.c（紅木半月，平面版與凸面版）
 ./scripts/gen-sound.sh [--preview out.wav]     # → src/sounds/*（合成的木頭撞擊聲，可先在 Mac 上試聽）
 ./scripts/gen-font.sh --extra "額外中文字"       # → src/fonts/*.c
+./scripts/gen-content.sh                       # data/*.json → spiffs_content/ + .pio/storage.bin
+./scripts/flash-content.sh                     # 只燒 storage 分區，不動韌體
 ./scripts/monitor.sh 20 --reset                # 非互動式讀序列埠（pio device monitor 需要 TTY）
 ```
+
+**語料在 [data/](data/)（進版控、人工編輯），產物在 `spiffs_content/`（不進版控、不手改）。**
+`gen-content.sh` 有字元白名單守門，混入非預期字元會直接中止——AI 產的語料實際出現過
+西里爾字母污染。籤詩 63 首已核對完成（`verified: true`），來源見
+[docs/knowledge-skill/M0-S1_SD卡與SPI2分時共用驗證-001/notes.md](docs/knowledge-skill/M0-S1_SD卡與SPI2分時共用驗證-001/notes.md) 的附錄。
+
+**PlatformIO 不會產生也不會燒 SPIFFS image**，`spiffs_create_partition_image()` 寫了沒用，
+見 [docs/notes/pio-does-not-build-or-flash-spiffs.md](docs/notes/pio-does-not-build-or-flash-spiffs.md)。
 
 **畫面上出現豆腐方塊 = 字型子集漏字。** 全形空白 `U+3000`、全形逗號 `U+FF0C` 這種標點也要收，改字串就要回頭改 `gen-font.sh` 的字集再重產。
 
@@ -140,13 +150,15 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 - **觸控**：直接讀 `0x38` 的 `0x02`~`0x06`，20ms 輪詢，不用觸控元件也不用接 INT。擲筊沒用到觸控，程式保留在 [docs/examples/display-touch-verify.c](docs/examples/display-touch-verify.c)
 - **LVGL 9**：esp_lvgl_port，368×64 雙緩衝（擲筊沒有網路，緩衝可以比天氣看板大一倍）
 - **IMU**：QMI8658 加速度計，`±8g` 檔位 4096 LSB/g，靜置合力實測 1.00~1.07 g。見 [docs/notes/qmi8658-accel-minimal-bringup.md](docs/notes/qmi8658-accel-minimal-bringup.md)
+- **RTC**：PCF85063 @ `0x51`，[src/rtc.c](src/rtc.c)。讀寫與走時實測正常；**軟關機保時未驗證**，產品刻意不依賴
+- **SPIFFS 語料**：`storage` 分區 9MB，掛載 296ms、讀 7.6KB JSON 加解析 10ms。內容走 [scripts/gen-content.sh](scripts/gen-content.sh) → [scripts/flash-content.sh](scripts/flash-content.sh)
 - **音訊**：ES8311 走 `espressif/esp_codec_dev`，16 kHz／16-bit。單聲道音源要自己攤成兩個 slot，見 [docs/notes/esp-codec-dev-needs-even-channels.md](docs/notes/esp-codec-dev-needs-even-channels.md)
 
 ## 待處理
 
-1. 其他周邊：PCF85063 / SD（AXP2101 目前只用到電源鍵 IRQ）
+1. 其他周邊：SD **板上無可用卡座，已確認不做**（見 [筆記](docs/notes/c6-lcd-sd-share-one-spi.md)）；PCF85063 驅動已寫（[src/rtc.c](src/rtc.c)）但**產品不依賴**——軟關機保時未驗證且決定不驗，參拜紀錄改用遞增序號
 2. 電池電量顯示（AXP2101 已初始化，讀 gauge 即可）
-3. 拋擲動畫實測 21 fps（2140ms / 46 幀）。要更順的話下一步是把 sprite 改成 RGB565A8 少搬四分之一的位元組，或把影子的圓角改成預算好的圖
+3. 拋擲動畫實測 21 fps（2140ms / 46 幀）。**S4 已證實瓶頸在 LVGL 算圖不在傳輸**——全螢幕傳輸上限 31 fps，而動畫只畫兩片 132×140 sprite。所以要做的是 sprite 改 RGB565A8、影子改預算好的圖，**不是**加大繪圖緩衝（見 [筆記](docs/notes/sh8601-qspi-fullscreen-throughput.md)）
 4. 搖動門檻（`imu.c` 的 `SWING_G` / `SWING_HALVES`）只在桌上驗過，手持手感要實際調
 
 ## 官方參考來源

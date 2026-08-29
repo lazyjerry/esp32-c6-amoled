@@ -18,4 +18,10 @@ idf_component_register(
         esp-tls
         mbedtls
         nvs_flash
+        # 語料放 storage 分區的 SPIFFS，內容在建置時燒進去
+        spiffs
 )
+
+# 註：不使用 spiffs_create_partition_image()。那是 IDF 的 custom target，
+# PlatformIO 的建置與 upload 流程不會執行它，image 不會產生也不會被燒進去。
+# storage 分區的映像改由 scripts/gen-content.sh 產生、scripts/flash-content.sh 燒錄。

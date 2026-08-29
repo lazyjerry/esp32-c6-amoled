@@ -1,6 +1,8 @@
-# 實體 flash 16MB；board 定義預設的 app 分區只有 1MB，顯示驅動與資源放不下
+# 實體 flash 16MB；board 定義預設的 app 分區只有 1MB，顯示驅動與資源放不下。
+# app 6MB / storage 9MB：實測估算過，圖與字型吃 app 分區（全螢幕背景一張 330KB、
+# 2,500 字 @24px 約 675KB），而語料 JSON 全部加起來不到 1MB，原本 4M/11M 是反的
 # Name,   Type, SubType, Offset,   Size,
 nvs,      data, nvs,     0x9000,   0x6000,
 phy_init, data, phy,     0xf000,   0x1000,
-factory,  app,  factory, 0x10000,  4M,
-storage,  data, spiffs,  ,         11M,
+factory,  app,  factory, 0x10000,  6M,
+storage,  data, spiffs,  ,         9M,

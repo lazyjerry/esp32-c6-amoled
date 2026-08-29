@@ -7,13 +7,17 @@
 # IDF component manager 下載物，靠 dependencies.lock 還原
 managed_components/
 
-# 由 sdkconfig.defaults 產生
-sdkconfig.esp32-c6-devkitc-1
+# 由 sdkconfig.defaults 產生，每個 env 一份
+sdkconfig.*
+!sdkconfig.defaults
 
 # 16MB 原廠韌體 dump，只留本機
 backup/
 
 .DS_Store
+
+# gen-content.sh 的產物，語料原始檔在 data/
+spiffs_content/
 
 # Python 匯入產生器腳本時留下的
 scripts/__pycache__/

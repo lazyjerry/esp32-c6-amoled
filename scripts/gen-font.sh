@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # 產生 LVGL 中文子集字型到 src/fonts/。
 # LVGL 內建字型只有 ASCII，中文要自己轉；整套 CJK 太大，只收 UI 實際會出現的字。
-# 用法：./scripts/gen-font.sh [--extra "額外要收的字"] [--font <ttf 路徑>]
+# 字集來源有三層，全部聯集：腳本內的 UI 固定字串、gen-content.sh 產的 charset.txt、--extra。
+# 語料的字一定要走 charset.txt——手動維護字串遲早會漏，而漏一個字畫面上就是一個豆腐方塊。
+# 用法：./scripts/gen-font.sh [--extra "額外要收的字"] [--font <ttf 路徑>] [--no-corpus]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTDIR="$ROOT/src/fonts"
 TTF="/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
 EXTRA=""
+CHARSET="$ROOT/spiffs_content/charset.txt"
+USE_CORPUS=1
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --extra) EXTRA="${2-}"; shift 2 ;;
-        --font)  TTF="${2-}";   shift 2 ;;
+        --extra)     EXTRA="${2-}"; shift 2 ;;
+        --font)      TTF="${2-}";   shift 2 ;;
+        --no-corpus) USE_CORPUS=0;  shift ;;
         -h|--help) sed -n '2,4p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) printf '未知參數：%s\n' "$1" >&2; exit 1 ;;
     esac
@@ -30,6 +35,19 @@ CAST_CHARS='擲筊聖笑陰立搖動請誠心默念所求之事神明允可依�
 WX_CHARS='晴多雲陰有霧淞毛細雨凍陣小大雪冰雹珠雷暴強沙塵'
 GEO_CHARS='台臺北新市桃園竹苗栗中彰化南投雲林嘉義高雄屏東宜蘭花蓮澎湖金門馬祖基隆鄉鎮區縣'
 
+# 語料字集。gen-content.sh 從 data/ 掃出來，語料一改就重產，不必手動同步
+CORPUS_CHARS=""
+if [ "$USE_CORPUS" -eq 1 ]; then
+    if [ -f "$CHARSET" ]; then
+        CORPUS_CHARS="$(cat "$CHARSET")"
+        printf '收錄語料字集：%s（%s 字）\n' "${CHARSET#$ROOT/}" \
+            "$(python3 -c 'import sys,io; print(len(io.open(sys.argv[1],encoding="utf-8").read().strip()))' "$CHARSET")"
+    else
+        printf '⚠  找不到 %s，這次不含語料字集——解籤畫面會出現豆腐方塊。\n' "${CHARSET#$ROOT/}" >&2
+        printf '   先跑 ./scripts/gen-content.sh 再回來。\n' >&2
+    fi
+fi
+
 # 逐字去重。macOS 的 en_US.UTF-8 對 CJK 沒有 collation 權重，sort -u／awk 比較
 # 會把不同的中文字判定相等而靜默丟字，改用 python 逐 code point 處理。
 SYMBOLS="$(python3 -c '
@@ -37,7 +55,7 @@ import sys
 s = sys.argv[1]
 seen = {}
 sys.stdout.write("".join(seen.setdefault(c, c) for c in s if c not in seen))
-' "${UI_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${EXTRA}")"
+' "${UI_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
 
 gen() {
     local name="$1" size="$2" bpp="$3" symbols="$4" ranges="$5"
@@ -67,4 +85,5 @@ gen font_num_56 56 4 "" "-r 0x2D -r 0x2E -r 0x30-0x39 -r 0x43 -r 0xB0"
 # 天氣圖示。Arial Unicode 沒有 U+26A1 閃電，雷雨改用 U+2607
 gen font_icon_72 72 4 "" "-r 0x2248 -r 0x2600-0x2603 -r 0x2607 -r 0x2744"
 
-printf '完成，輸出於 %s\n' "$OUTDIR"
+printf '完成，輸出於 %s（共 %s 個相異字符）\n' "$OUTDIR" \
+    "$(python3 -c 'import sys; print(len(sys.argv[1]))' "$SYMBOLS")"
