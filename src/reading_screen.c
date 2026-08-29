@@ -11,6 +11,7 @@
 
 #include "content.h"
 #include "end_screen.h"
+#include "records_screen.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -33,8 +34,21 @@ static lv_obj_t *s_meta;
 static lv_obj_t *s_text;
 static lv_obj_t *s_cat;
 static lv_obj_t *s_reading;
+static lv_obj_t *s_btn_label;
 
 static volatile bool s_leave;
+
+// 翻閱模式：籤號與類別由參拜簿指定，不看這一次參拜的狀態
+static bool s_browse;
+static int s_browse_poem;
+static int s_browse_cat;
+
+void reading_screen_browse(int poem_no, int cat)
+{
+    s_browse = true;
+    s_browse_poem = poem_no;
+    s_browse_cat = cat;
+}
 
 // 籤詩本文在語料裡是用全形空白分隔的四句。一句一行才是籤詩的樣子，
 // 交給 LVGL 自動折行會斷在句子中間
@@ -93,11 +107,10 @@ static void build_screen(void)
     lv_obj_set_style_border_color(btn, lv_color_hex(0x8A6A30), 0);
     lv_obj_set_style_border_width(btn, 2, 0);
     lv_obj_add_event_cb(btn, on_leave, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *label = lv_label_create(btn);
-    lv_obj_set_style_text_font(label, &font_zh_16, 0);
-    lv_obj_set_style_text_color(label, lv_color_hex(0xE0C890), 0);
-    lv_label_set_text(label, "禮畢");
-    lv_obj_center(label);
+    s_btn_label = lv_label_create(btn);
+    lv_obj_set_style_text_font(s_btn_label, &font_zh_16, 0);
+    lv_obj_set_style_text_color(s_btn_label, lv_color_hex(0xE0C890), 0);
+    lv_obj_center(s_btn_label);
 }
 
 static esp_err_t enter(void)
@@ -105,7 +118,8 @@ static esp_err_t enter(void)
     s_leave = false;
 
     content_poem_t p;
-    int no = ritual_poem();
+    int no = s_browse ? s_browse_poem : ritual_poem();
+    int cat = s_browse ? s_browse_cat : ritual_category();
     esp_err_t err = content_get_poem(no, &p);
 
     lvgl_port_lock(0);
@@ -113,7 +127,7 @@ static esp_err_t enter(void)
 
     if (err == ESP_OK) {
         lv_label_set_text(s_head, p.name);
-        lv_label_set_text_fmt(s_cat, "所問：%s", ritual_cat_name(ritual_category()));
+        lv_label_set_text_fmt(s_cat, "所問：%s", ritual_cat_name((ritual_cat_t)cat));
         lv_label_set_text_fmt(s_meta, "%s　%s　%s", p.ganzhi, p.trigram, p.attr);
 
         char lines[sizeof(p.text) + 8];
@@ -121,7 +135,7 @@ static esp_err_t enter(void)
         lv_label_set_text(s_text, lines);
 
         char reading[CONTENT_READING_MAX];
-        if (content_get_reading(no, ritual_category(), reading, sizeof(reading)) == ESP_OK) {
+        if (content_get_reading(no, cat, reading, sizeof(reading)) == ESP_OK) {
             lv_label_set_text(s_reading, reading);
         } else {
             lv_label_set_text(s_reading, "這首的白話解讀尚未寫入。");
@@ -135,6 +149,9 @@ static esp_err_t enter(void)
         lv_label_set_text(s_reading, "");
     }
 
+    // 翻閱是從參拜簿進來的，出口也該指回參拜簿
+    lv_label_set_text(s_btn_label, s_browse ? "回參拜簿" : "禮畢");
+
     lv_obj_scroll_to_y(s_scr, 0, LV_ANIM_OFF);
     lv_screen_load(s_scr);
     lvgl_port_unlock();
@@ -145,14 +162,21 @@ static void tick(void)
 {
     if (s_leave) {
         s_leave = false;
-        screen_mgr_goto(&end_screen);
+        // 翻閱是從參拜簿來的，禮畢頁只屬於剛走完的那次參拜
+        if (s_browse) {
+            s_browse = false;
+            screen_mgr_goto(&records_screen);
+        } else {
+            screen_mgr_goto(&end_screen);
+        }
     }
 }
 
 static bool on_event(screen_event_t ev)
 {
-    // 讀完離開走長按或底部的「回正殿」鈕。捲動中誤觸短按不該把人踢出去
+    // 讀完離開走長按或底部的按鈕。捲動中誤觸短按不該把人踢出去
     if (ev == SCREEN_EV_BOOT_HOLD) {
+        s_browse = false;
         screen_mgr_goto(&shrine_screen);
         return true;
     }

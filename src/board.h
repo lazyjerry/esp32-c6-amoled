@@ -49,6 +49,9 @@ esp_err_t board_display_on(bool on);
 esp_err_t board_display_brightness(uint8_t level);
 void board_display_fade(uint8_t from, uint8_t to, uint32_t ms);
 
+// 電池電量百分比（0~100）。AXP2101 的 gauge 沒開或沒接電池時回 ESP_ERR_NOT_SUPPORTED
+esp_err_t board_battery_percent(uint8_t *percent);
+
 // AXP2101 的 PWR 鍵短按會在 INTSTS2 留下旗標；讀到就順手清掉。
 // 長按關機是 PMIC 硬體行為，韌體攔不到也擋不掉。
 bool board_pwrkey_short_pressed(void);

@@ -24,6 +24,7 @@
 #define AXP2101_ADDR    0x34
 #define AXP2101_COMMON  0x10
 #define AXP2101_PRESS_TIME 0x27
+#define AXP2101_BAT_PCT 0xA4          // gauge 算出的電量百分比。實測開機即有效，不必自己開 ADC
 #define AXP2101_INTEN2  0x41
 #define AXP2101_INTSTS2 0x49
 #define AXP2101_PKEY_SHORT (1 << 3)   // INTSTS2 bit3 = POWERON short press
@@ -281,12 +282,31 @@ bool board_pwrkey_short_pressed(void)
     return true;
 }
 
+esp_err_t board_battery_percent(uint8_t *percent)
+{
+    if (s_axp == NULL || percent == NULL) return ESP_ERR_INVALID_STATE;
+
+    uint8_t v = 0;
+    ESP_RETURN_ON_ERROR(reg_read(s_axp, AXP2101_BAT_PCT, &v), TAG, "讀電量");
+    // gauge 沒開或沒接電池時這個暫存器不會是合法的百分比
+    if (v > 100) return ESP_ERR_NOT_SUPPORTED;
+    *percent = v;
+    return ESP_OK;
+}
+
 void board_pmic_log(void)
 {
     if (s_axp == NULL) {
         ESP_LOGW(TAG, "AXP2101 未就緒");
         return;
     }
+
+    // gauge 實測預設就是開的（ADC_EN=0x03），本專案因此完全不必寫 AXP2101 的任何暫存器
+    uint8_t st2 = 0, pct = 0;
+    reg_read(s_axp, 0x01, &st2);
+    reg_read(s_axp, AXP2101_BAT_PCT, &pct);
+    // STATUS2 bit[2:0]：010 定流、011 定壓、100 充飽、101 沒在充
+    ESP_LOGI(TAG, "AXP2101 電量 %u%%，充電狀態 0x%02X", pct, st2 & 0x07);
 
     uint8_t common = 0, press = 0;
     reg_read(s_axp, AXP2101_COMMON, &common);

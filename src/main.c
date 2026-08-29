@@ -23,6 +23,7 @@
 #include "imu.h"
 #include "records.h"
 #include "screen_mgr.h"
+#include "settings.h"
 #include "shrine_screen.h"
 #include "touch.h"
 #include "verify_s3.h"
@@ -38,8 +39,8 @@ void app_main(void) { verify_s3_run(); }
 #define POLL_MS     50
 // 按滿這麼久就算長按（離開目前畫面）。短於此的放開才算短按
 #define HOLD_MS     900
-// 開機淡入、關機淡出：面板亮度（SH8601 0x51），讓兩個狀態轉換看得出來
-#define BRIGHT_FULL 0xFF
+// 開機淡入、關機淡出：面板亮度（SH8601 0x51），讓兩個狀態轉換看得出來。
+// 目標亮度是使用者在設定頁調過的值，不是寫死的滿亮
 #define FADE_IN_MS  800
 #define FADE_OUT_MS 600
 
@@ -77,7 +78,7 @@ static void fade(uint8_t from, uint8_t to, uint32_t ms)
 static void power_off(void)
 {
     ESP_LOGI(TAG, "PWR 鍵短按：軟關機，按 PWR 鍵才會再開機");
-    fade(BRIGHT_FULL, 0, FADE_OUT_MS);
+    fade(settings_brightness(), 0, FADE_OUT_MS);
     board_display_on(false);
     board_speaker_power(false);
 
@@ -88,7 +89,7 @@ static void power_off(void)
     ESP_LOGW(TAG, "軟關機未生效（%s），繼續運作", esp_err_to_name(err));
     board_speaker_power(true);
     board_display_on(true);
-    fade(0, BRIGHT_FULL, FADE_IN_MS);
+    fade(0, settings_brightness(), FADE_IN_MS);
 }
 
 static void button_init(void)
@@ -122,6 +123,11 @@ void app_main(void)
     err = records_init();
     if (err != ESP_OK) ESP_LOGW(TAG, "參拜紀錄初始化失敗（%s），本次不留紀錄", esp_err_to_name(err));
 
+    // 音量與亮度是使用者調過的偏好，讀不回來就用預設值，不值得中斷開機
+    err = settings_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "設定讀取失敗（%s），本次用預設值", esp_err_to_name(err));
+    audio_set_volume(settings_volume());
+
     // 語料讀不到就停在錯誤畫面，不建立擲筊畫面。
     // 讓裝置「看起來能用」只會把問題留到求到籤卻沒有籤詩的那一刻
     esp_err_t content_err = content_mount();
@@ -141,7 +147,7 @@ void app_main(void)
     board_display_brightness(0);
     lvgl_port_unlock();
     vTaskDelay(pdMS_TO_TICKS(50));
-    fade(0, BRIGHT_FULL, FADE_IN_MS);
+    fade(0, settings_brightness(), FADE_IN_MS);
 
     int prev_level = 1;
     while (1) {

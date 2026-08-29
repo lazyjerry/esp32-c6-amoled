@@ -5,6 +5,7 @@
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "lvgl.h"
+#include "records.h"
 #include "ritual.h"
 #include "screen_mgr.h"
 #include "shrine_screen.h"
@@ -75,6 +76,8 @@ static void tick(void)
 {
     if (s_picked == RITUAL_CAT_NONE) return;
     ritual_set_category(s_picked);
+    records_count_tell(s_picked);
+    records_flush();   // 這個畫面沒有動畫在跑，當場落地
     ESP_LOGI(TAG, "稟告：%s", ritual_cat_name(s_picked));
     s_picked = RITUAL_CAT_NONE;
     screen_mgr_goto(&draw_screen);

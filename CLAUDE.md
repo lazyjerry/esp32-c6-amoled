@@ -122,12 +122,13 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 | [display.c](src/display.c) | 起 LVGL 與面板，與任何單一畫面無關 |
 | [content.c](src/content.c) | 掛 storage 分區的 SPIFFS，並確認 `poems.json` 讀得到 |
 | [shrine_screen.c](src/shrine_screen.c) | 正殿。**神像與神龕是 LVGL 幾何佔位造型，不是美術**；香煙是 120×160 局部動畫 |
-| [stub_screen.c](src/stub_screen.c) | 設定的空殼（參拜簿 M3 已換成真的畫面） |
 | [error_screen.c](src/error_screen.c) | 語料掛不起來時的死路畫面。刻意不退回擲筊 |
 | [cast_screen.c](src/cast_screen.c) | 擲筊，包住既有的 `cast_ui.c`。求籤後進來是**確認模式**，依筊象決定去向 |
-| [records.c](src/records.c) | 參拜紀錄存 NVS：序號 + 類別 + 籤號，環形保留最近 20 筆。**不存日期** |
-| [records_screen.c](src/records_screen.c) | 參拜簿。條列最近幾次參拜，每次進來重建 |
+| [records.c](src/records.c) | 參拜紀錄存 NVS：序號 + 類別 + 籤號，環形保留最近 20 筆，另加只增不減的累計統計。**不存日期** |
+| [records_screen.c](src/records_screen.c) | 參拜簿。累計統計 + 求中的籤（點一列翻到該首），每次進來重建 |
 | [end_screen.c](src/end_screen.c) | 禮畢頁。解籤閣讀完的收尾，2.6 秒自動回正殿 |
+| [settings.c](src/settings.c) | 音量與亮度存 NVS（namespace `cfg`），只保管數值不負責套用 |
+| [settings_screen.c](src/settings_screen.c) | 設定頁。**直立格子條**（橫向滑桿會和左右滑動換頁搶手勢）加一行電量，拖動即時套用、放開才寫 NVS |
 | [bow_screen.c](src/bow_screen.c) | 三拜。拜是姿勢變化不是甩動，看重力向量轉了幾度，基準在進畫面時取 |
 | [tell_screen.c](src/tell_screen.c) | 稟告。6 類別 2×3，點一格記進 `ritual.c` 並進求籤 |
 | [draw_screen.c](src/draw_screen.c) | 求籤。籤號在動畫開始時就抽好，動畫只是演出來 |
@@ -182,15 +183,15 @@ IDF 6.0 有兩個搬家要注意：cJSON 不再內建（改吃 `espressif/cjson`
 - **IMU**：QMI8658 加速度計，`±8g` 檔位 4096 LSB/g，靜置合力實測 1.00~1.07 g。見 [docs/notes/qmi8658-accel-minimal-bringup.md](docs/notes/qmi8658-accel-minimal-bringup.md)
 - **RTC**：PCF85063 @ `0x51`，[src/rtc.c](src/rtc.c)。讀寫與走時實測正常；**軟關機保時未驗證**，產品刻意不依賴
 - **SPIFFS 語料**：`storage` 分區 9MB，掛載 296ms、讀 7.6KB JSON 加解析 10ms。內容走 [scripts/gen-content.sh](scripts/gen-content.sh) → [scripts/flash-content.sh](scripts/flash-content.sh)
+- **電量**：AXP2101 的 gauge **開機即有效**（`ADC_EN=0x03`），讀 `0xA4` 就是百分比，不必寫任何暫存器。[src/board.c](src/board.c) 的 `board_battery_percent()`
 - **音訊**：ES8311 走 `espressif/esp_codec_dev`，16 kHz／16-bit。單聲道音源要自己攤成兩個 slot，見 [docs/notes/esp-codec-dev-needs-even-channels.md](docs/notes/esp-codec-dev-needs-even-channels.md)
 
 ## 待處理
 
 1. **M3 待實機驗收**：軟關機再開機後序號要連續、紀錄不遺失
 2. 其他周邊：SD **板上無可用卡座，已確認不做**（見 [筆記](docs/notes/c6-lcd-sd-share-one-spi.md)）；PCF85063 驅動已寫（[src/rtc.c](src/rtc.c)）但**產品不依賴**——軟關機保時未驗證且決定不驗，參拜紀錄改用遞增序號
-3. 電池電量顯示（AXP2101 已初始化，讀 gauge 即可）
-4. 拋擲動畫實測 21 fps（2140ms / 46 幀）。**S4 已證實瓶頸在 LVGL 算圖不在傳輸**——全螢幕傳輸上限 31 fps，而動畫只畫兩片 132×140 sprite。所以要做的是 sprite 改 RGB565A8、影子改預算好的圖，**不是**加大繪圖緩衝（見 [筆記](docs/notes/sh8601-qspi-fullscreen-throughput.md)）
-5. 搖動門檻（`imu.c` 的 `SWING_G` / `SWING_HALVES`）只在桌上驗過，手持手感要實際調
+3. 拋擲動畫實測 21 fps（2140ms / 46 幀）。**S4 已證實瓶頸在 LVGL 算圖不在傳輸**——全螢幕傳輸上限 31 fps，而動畫只畫兩片 132×140 sprite。所以要做的是 sprite 改 RGB565A8、影子改預算好的圖，**不是**加大繪圖緩衝（見 [筆記](docs/notes/sh8601-qspi-fullscreen-throughput.md)）
+4. 搖動門檻（`imu.c` 的 `SWING_G` / `SWING_HALVES`）只在桌上驗過，手持手感要實際調
 
 ## 官方參考來源
 

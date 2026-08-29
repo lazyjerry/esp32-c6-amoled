@@ -10,6 +10,7 @@
 #include "cast_ui.h"
 #include "draw_screen.h"
 #include "reading_screen.h"
+#include "records.h"
 #include "ritual.h"
 #include "screen_mgr.h"
 #include "shrine_screen.h"
@@ -46,12 +47,16 @@ static void throw_blocks(const char *why)
 {
     cast_result_t r = cast_draw();
     s_last_result = r;
+    records_count_cast(r);
     ESP_LOGI(TAG, "%s：%s", why, cast_result_name(r));
     cast_ui_play(r);
 }
 
 static void clear_result(const char *why)
 {
+    // 動畫已經停了，這裡落地才不會為了寫 flash 掉幀
+    records_flush();
+
     // 聖筊進解籤閣、陰筊回求籤，兩者都是換畫面，就不要先回到預備畫面——
     // 那一閃看起來像在叫人再擲一次。畫面留在結果上直到下一輪 tick 換走，
     // 待機狀態改在 enter() 復原
@@ -114,6 +119,7 @@ static esp_err_t enter(void)
 
 static void exit_(void)
 {
+    records_flush();   // 滑走的路徑不經過 clear_result，計數不能跟著丟掉
     // 模式不跨畫面殘留：下次從正殿進來一定是自由擲筊
     s_confirm = false;
     s_pending_goto = NULL;

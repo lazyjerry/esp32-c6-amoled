@@ -25,6 +25,8 @@
 static const char *TAG = "audio";
 
 static esp_codec_dev_handle_t s_dev;
+// 全域音量。codec 的輸出增益，與每一聲的相對音量各管各的
+static uint8_t s_master = OUT_VOLUME;
 static QueueHandle_t s_queue;
 // 單聲道音源要攤成兩個 slot：esp_codec_dev 的 I2S 資料層只接受偶數聲道
 static int16_t s_chunk[CHUNK_FRAMES * 2];
@@ -122,7 +124,7 @@ esp_err_t audio_init(void)
         .sample_rate = SND_SAMPLE_RATE,
     };
     ESP_RETURN_ON_FALSE(esp_codec_dev_open(s_dev, &fs) == ESP_CODEC_DEV_OK, ESP_FAIL, TAG, "open");
-    esp_codec_dev_set_out_vol(s_dev, OUT_VOLUME);
+    esp_codec_dev_set_out_vol(s_dev, s_master);
 
     ESP_RETURN_ON_ERROR(board_speaker_power(true), TAG, "喇叭電源");
 
@@ -134,6 +136,15 @@ esp_err_t audio_init(void)
     ESP_LOGI(TAG, "ES8311 就緒，%d Hz", SND_SAMPLE_RATE);
     return ESP_OK;
 }
+
+esp_err_t audio_set_volume(uint8_t percent)
+{
+    s_master = percent > 100 ? 100 : percent;
+    if (!s_dev) return ESP_OK;   // 還沒起來也記著，audio_init() 會套用
+    return esp_codec_dev_set_out_vol(s_dev, s_master) == ESP_CODEC_DEV_OK ? ESP_OK : ESP_FAIL;
+}
+
+uint8_t audio_volume(void) { return s_master; }
 
 void audio_play_clack(uint8_t volume)
 {

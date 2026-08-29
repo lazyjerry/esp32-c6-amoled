@@ -34,6 +34,10 @@ UI_CHARS='天氣溫度濕體感風速更新連線中失敗休眠電池未取得�
 ERR_CHARS='語料未燒錄接上執行'
 # 導覽：正殿的兩個側翼（stub_screen.c）
 NAV_CHARS='參拜簿尚開放'
+# 參拜簿統計（records_screen.c）
+STAT_CHARS='累計統稟告求中的擲筊聖笑陰立次數參拜簿尚無紀錄回'
+# 設定頁（settings_screen.c）
+SETTING_CHARS='音量亮度電'
 # 參拜紀錄：參拜簿與禮畢頁（records_screen.c、end_screen.c）
 RECORD_CHARS='累計紀錄無禮畢平安'
 # 儀式流程：每日參拜、稟告、求籤、解籤閣
