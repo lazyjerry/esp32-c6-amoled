@@ -5,6 +5,7 @@
 // 紀錄已經寫進 NVS 了，這是使用者唯一會看到它的地方。
 #include "end_screen.h"
 
+#include "audio.h"
 #include "esp_lvgl_port.h"
 #include "esp_timer.h"
 #include "lvgl.h"
@@ -44,6 +45,7 @@ static void build_screen(void)
 static esp_err_t enter(void)
 {
     s_entered_at_us = esp_timer_get_time();
+    audio_play_bell(80);   // 收尾這一聲比禮成小，是餘韻不是宣告
 
     lvgl_port_lock(0);
     if (!s_scr) build_screen();
@@ -54,7 +56,7 @@ static esp_err_t enter(void)
     } else {
         lv_label_set_text(s_seq, "");
     }
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

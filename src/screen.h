@@ -22,6 +22,12 @@ typedef enum {
     SCREEN_EV_SWIPE_RIGHT,
 } screen_event_t;
 
+// 把畫面推上前景，帶統一的淡入轉場。各畫面的 enter() 用這支，
+// 不要直接 lv_screen_load()——轉場的型態與長短是全域一致的事，散在十個畫面裡會走樣。
+// 要在 LVGL 鎖內呼叫（enter() 本來就是）
+struct _lv_obj_t;
+void screen_load(struct _lv_obj_t *scr);
+
 typedef struct screen_s {
     const char *name;
 

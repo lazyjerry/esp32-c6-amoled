@@ -230,7 +230,7 @@ static esp_err_t enter(void)
         lv_label_set_text(s_batt, "電量 --");
     }
 
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

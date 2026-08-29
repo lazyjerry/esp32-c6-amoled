@@ -20,14 +20,25 @@
 #define I2S_DOUT 23
 
 #define OUT_VOLUME 75
+// codec 音量的上限。ES8311 的刻度接近滿檔時會把訊號推進削頂區，實測最高檔破音。
+// 使用者看到的 0~100 對應到 codec 的 0~VOL_CEIL，最高一格就落在還乾淨的位置——
+// 與其讓使用者自己避開最後幾格，不如讓整條刻度都是可用的
+#define VOL_CEIL 80
 #define CHUNK_FRAMES 256
 
 static const char *TAG = "audio";
 
 static esp_codec_dev_handle_t s_dev;
-// 全域音量。codec 的輸出增益，與每一聲的相對音量各管各的
+// 全域音量，存的是**使用者刻度** 0~100。送進 codec 前才換算成 codec 刻度
 static uint8_t s_master = OUT_VOLUME;
 static QueueHandle_t s_queue;
+
+// 佇列裡放的是「哪一種音、多大聲」。原本只有一種音時傳個音量就夠，
+// 加了鐘之後音量單獨傳會分不出要播哪一個
+typedef struct {
+    bool bell;
+    uint8_t volume;
+} audio_req_t;
 // 單聲道音源要攤成兩個 slot：esp_codec_dev 的 I2S 資料層只接受偶數聲道
 static int16_t s_chunk[CHUNK_FRAMES * 2];
 
@@ -51,16 +62,18 @@ static esp_err_t i2s_init(i2s_chan_handle_t *tx)
     return i2s_channel_init_std_mode(*tx, &std_cfg);
 }
 
-static void play(uint8_t volume)
+static void play(const audio_req_t *req)
 {
-    int32_t gain = volume > 100 ? 100 : volume;
+    int32_t gain = req->volume > 100 ? 100 : req->volume;
+    const int16_t *pcm = req->bell ? snd_bell : snd_clack;
+    size_t len = req->bell ? snd_bell_len : snd_clack_len;
 
-    for (size_t i = 0; i < snd_clack_len; i += CHUNK_FRAMES) {
-        size_t frames = snd_clack_len - i;
+    for (size_t i = 0; i < len; i += CHUNK_FRAMES) {
+        size_t frames = len - i;
         if (frames > CHUNK_FRAMES) frames = CHUNK_FRAMES;
 
         for (size_t j = 0; j < frames; j++) {
-            int16_t s = (int16_t)((snd_clack[i + j] * gain) / 100);
+            int16_t s = (int16_t)((pcm[i + j] * gain) / 100);
             s_chunk[j * 2] = s;
             s_chunk[j * 2 + 1] = s;
         }
@@ -73,10 +86,10 @@ static void play(uint8_t volume)
 
 static void audio_task(void *arg)
 {
-    uint8_t volume;
+    audio_req_t req;
     while (1) {
-        if (xQueueReceive(s_queue, &volume, portMAX_DELAY) == pdTRUE) {
-            play(volume);
+        if (xQueueReceive(s_queue, &req, portMAX_DELAY) == pdTRUE) {
+            play(&req);
         }
     }
 }
@@ -124,11 +137,11 @@ esp_err_t audio_init(void)
         .sample_rate = SND_SAMPLE_RATE,
     };
     ESP_RETURN_ON_FALSE(esp_codec_dev_open(s_dev, &fs) == ESP_CODEC_DEV_OK, ESP_FAIL, TAG, "open");
-    esp_codec_dev_set_out_vol(s_dev, s_master);
+    esp_codec_dev_set_out_vol(s_dev, s_master * VOL_CEIL / 100);
 
     ESP_RETURN_ON_ERROR(board_speaker_power(true), TAG, "喇叭電源");
 
-    s_queue = xQueueCreate(4, sizeof(uint8_t));
+    s_queue = xQueueCreate(4, sizeof(audio_req_t));
     ESP_RETURN_ON_FALSE(s_queue, ESP_ERR_NO_MEM, TAG, "queue");
     ESP_RETURN_ON_FALSE(xTaskCreate(audio_task, "audio", 3072, NULL, 6, NULL) == pdPASS,
                         ESP_ERR_NO_MEM, TAG, "task");
@@ -141,13 +154,18 @@ esp_err_t audio_set_volume(uint8_t percent)
 {
     s_master = percent > 100 ? 100 : percent;
     if (!s_dev) return ESP_OK;   // 還沒起來也記著，audio_init() 會套用
-    return esp_codec_dev_set_out_vol(s_dev, s_master) == ESP_CODEC_DEV_OK ? ESP_OK : ESP_FAIL;
+    int vol = s_master * VOL_CEIL / 100;
+    return esp_codec_dev_set_out_vol(s_dev, vol) == ESP_CODEC_DEV_OK ? ESP_OK : ESP_FAIL;
 }
 
 uint8_t audio_volume(void) { return s_master; }
 
-void audio_play_clack(uint8_t volume)
+static void enqueue(bool bell, uint8_t volume)
 {
     if (s_queue == NULL) return;
-    xQueueSend(s_queue, &volume, 0);
+    audio_req_t req = {.bell = bell, .volume = volume};
+    xQueueSend(s_queue, &req, 0);
 }
+
+void audio_play_clack(uint8_t volume) { enqueue(false, volume); }
+void audio_play_bell(uint8_t volume) { enqueue(true, volume); }

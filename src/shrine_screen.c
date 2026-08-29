@@ -186,7 +186,7 @@ static esp_err_t enter(void)
     s_goto_ritual = false;
     lvgl_port_lock(0);
     if (!s_scr) build_screen();
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lv_timer_resume(s_timer);
     lvgl_port_unlock();
     return ESP_OK;

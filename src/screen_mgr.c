@@ -2,10 +2,21 @@
 
 #include "esp_check.h"
 #include "esp_log.h"
+#include "lvgl.h"
 
 static const char *TAG = "screen";
 
 static const screen_t *s_current;
+
+// 轉場長度。再長會讓「點一下就走」的操作感變鈍，
+// 而這片面板畫一張全螢幕就要 32ms，拉長也只是多畫幾張
+#define TRANSITION_MS 150
+
+void screen_load(lv_obj_t *scr)
+{
+    // auto_del = false：畫面物件建一次就快取著，不能讓 LVGL 幫忙刪掉舊的
+    lv_screen_load_anim(scr, LV_SCR_LOAD_ANIM_FADE_IN, TRANSITION_MS, 0, false);
+}
 
 esp_err_t screen_mgr_init(const screen_t *initial)
 {

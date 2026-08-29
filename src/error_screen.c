@@ -47,7 +47,7 @@ static esp_err_t enter(void)
     lv_label_set_text(code, s_detail);
     lv_obj_align(code, LV_ALIGN_BOTTOM_MID, 0, -30);
 
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

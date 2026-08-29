@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""合成筊落地的撞擊聲。由 scripts/gen-sound.sh 呼叫，不單獨使用。
+"""合成韌體內建的音效。由 scripts/gen-sound.sh 呼叫，不單獨使用。
 
-木頭互敲的聲音 = 一段極短的寬頻起音（兩物體接觸的瞬態）+ 幾個指數衰減的共振模態。
+兩種音都是「一段極短的寬頻起音（接觸的瞬態）+ 幾個指數衰減的共振模態」：
+筊是木頭互敲，能量集中在低中頻、衰減很快；鐘是銅體，模態彼此不成整數倍、拖得久。
 用固定亂數種子，重跑產出的位元完全相同，diff 才有意義。
 """
 import argparse
@@ -19,6 +20,15 @@ BODY_DECAY = 0.014      # 悶掉的寬頻成分，撐出木頭的厚度
 BODY_LEVEL = 0.42
 ATTACK = 0.0015
 PEAK = 0.72             # 留餘裕，避免 codec 端再加增益就削頂
+
+BELL_DURATION = 1.10
+# 鐘的模態刻意不成整數倍——成整數倍就變成有音高的樂器音，不像鐘。
+# 高模態衰減得比低模態快，那是「噹」之後只剩嗡嗡尾音的來源
+BELL_MODES = ((523.0, 0.62, 1.00), (1046.0, 0.40, 0.52), (1263.0, 0.30, 0.44),
+              (1580.0, 0.22, 0.30), (2355.0, 0.13, 0.18), (3140.0, 0.08, 0.10))
+BELL_STRIKE_DECAY = 0.006   # 槌頭打上去的那一下
+BELL_STRIKE_LEVEL = 0.40
+BELL_ATTACK = 0.0012
 
 
 def synth(rate):
@@ -51,6 +61,30 @@ def synth(rate):
     return [max(-32768, min(32767, int(s * gain))) for s in samples]
 
 
+def synth_bell(rate):
+    rng = random.Random(20260829)
+    n = int(rate * BELL_DURATION)
+
+    strike, p = [], 0.0
+    for _ in range(n):
+        p = 0.30 * p + 0.70 * rng.uniform(-1.0, 1.0)
+        strike.append(p)
+
+    samples = []
+    for i in range(n):
+        t = i / rate
+        v = BELL_STRIKE_LEVEL * strike[i] * math.exp(-t / BELL_STRIKE_DECAY)
+        for freq, tau, weight in BELL_MODES:
+            v += weight * math.exp(-t / tau) * math.sin(2.0 * math.pi * freq * t)
+        if t < BELL_ATTACK:
+            v *= t / BELL_ATTACK
+        samples.append(v)
+
+    peak = max(abs(s) for s in samples) or 1.0
+    gain = PEAK * 32767.0 / peak
+    return [max(-32768, min(32767, int(s * gain))) for s in samples]
+
+
 def emit(outdir, name, samples, rate):
     lines = []
     for i in range(0, len(samples), 12):
@@ -62,13 +96,17 @@ def emit(outdir, name, samples, rate):
         fh.write("const int16_t %s[] = {\n%s\n};\n\n" % (name, "\n".join(lines)))
         fh.write("const size_t %s_len = sizeof(%s) / sizeof(%s[0]);\n" % (name, name, name))
 
+    print("產生 %s（%d 取樣 @ %d Hz, %d bytes）" % (name, len(samples), rate, len(samples) * 2))
+
+
+# 標頭一次寫齊。每個音各自覆寫的話，最後一個產生的音會把前面的宣告洗掉
+def emit_header(outdir, names, rate):
     with open("%s/sounds.h" % outdir, "w") as fh:
         fh.write("// 由 scripts/gen-sound.sh 產生，請勿手動編輯\n#pragma once\n\n")
         fh.write("#include <stddef.h>\n#include <stdint.h>\n\n")
         fh.write("#define SND_SAMPLE_RATE %d\n\n" % rate)
-        fh.write("extern const int16_t %s[];\nextern const size_t %s_len;\n" % (name, name))
-
-    print("產生 %s（%d 取樣 @ %d Hz, %d bytes）" % (name, len(samples), rate, len(samples) * 2))
+        for name in names:
+            fh.write("extern const int16_t %s[];\nextern const size_t %s_len;\n" % (name, name))
 
 
 def write_wav(path, samples, rate):
@@ -87,10 +125,14 @@ def main():
     ap.add_argument("--preview")
     args = ap.parse_args()
 
-    samples = synth(args.rate)
-    emit(args.outdir, "snd_clack", samples, args.rate)
+    clack = synth(args.rate)
+    bell = synth_bell(args.rate)
+    emit(args.outdir, "snd_clack", clack, args.rate)
+    emit(args.outdir, "snd_bell", bell, args.rate)
+    emit_header(args.outdir, ("snd_clack", "snd_bell"), args.rate)
     if args.preview:
-        write_wav(args.preview, samples, args.rate)
+        write_wav(args.preview, clack, args.rate)
+        write_wav(args.preview.replace(".wav", "-bell.wav"), bell, args.rate)
 
 
 if __name__ == "__main__":

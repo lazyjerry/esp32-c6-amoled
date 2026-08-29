@@ -153,7 +153,7 @@ static esp_err_t enter(void)
     lv_label_set_text(s_btn_label, s_browse ? "回參拜簿" : "禮畢");
 
     lv_obj_scroll_to_y(s_scr, 0, LV_ANIM_OFF);
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

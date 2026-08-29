@@ -5,6 +5,8 @@
 // 整段跑在 LVGL 自己的 timer 裡，所以回呼內不需要再上 lvgl_port_lock。
 #include "cast_ui.h"
 
+#include "screen.h"
+
 #include <inttypes.h>
 #include <math.h>
 
@@ -363,7 +365,7 @@ esp_err_t cast_ui_init(void)
 void cast_ui_show(void)
 {
     lvgl_port_lock(0);
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
 }
 

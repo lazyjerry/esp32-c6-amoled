@@ -212,7 +212,7 @@ static esp_err_t enter(void)
     lvgl_port_lock(0);
     if (!s_scr) build_screen();
     tube_reset();
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

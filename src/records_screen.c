@@ -170,7 +170,7 @@ static esp_err_t enter(void)
     if (!s_scr) build_screen();
     fill_body();
     lv_obj_scroll_to_y(s_scr, 0, LV_ANIM_OFF);
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     return ESP_OK;
 }

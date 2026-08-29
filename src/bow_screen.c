@@ -8,6 +8,7 @@
 
 #include <math.h>
 
+#include "audio.h"
 #include "esp_lvgl_port.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -86,7 +87,7 @@ static esp_err_t enter(void)
 
     lvgl_port_lock(0);
     if (!s_scr) build_screen();
-    lv_screen_load(s_scr);
+    screen_load(s_scr);
     lvgl_port_unlock();
     refresh();
     return ESP_OK;
@@ -111,7 +112,10 @@ static void count_bow(const char *why)
 {
     s_bows++;
     ESP_LOGI(TAG, "%s：第 %d 拜", why, s_bows);
-    if (s_bows >= BOWS_NEEDED) s_done_at_us = esp_timer_get_time();
+    if (s_bows >= BOWS_NEEDED) {
+        s_done_at_us = esp_timer_get_time();
+        audio_play_bell(90);   // 三拜完成敲一聲，是這段的句點
+    }
     refresh();
 }
 

@@ -8,3 +8,5 @@
 
 extern const int16_t snd_clack[];
 extern const size_t snd_clack_len;
+extern const int16_t snd_bell[];
+extern const size_t snd_bell_len;
