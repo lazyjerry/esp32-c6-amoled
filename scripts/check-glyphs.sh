@@ -27,21 +27,45 @@ else:
     print("⚠  找不到 spiffs_content/charset.txt，先跑 ./scripts/gen-content.sh", file=sys.stderr)
 
 # gen-font.sh 的 -r 範圍：ASCII、度、全形空白、全形逗號
-have = set(charset) | {chr(c) for c in range(0x20, 0x7F)} | {"°", "　", "，"}
+# -r 範圍直接從 gen-font.sh 的 gen font_zh_16 那行解析。硬編一份「已知的標點」
+# 就是兩邊各走各的開始——全形括號漏掉過一次就是這樣來的
+ranges = set()
+m = re.search(r'gen font_zh_16[^\n]*"((?:-r [^"]*))"', sh)
+if not m:
+    print("✗ 讀不到 gen-font.sh 的 -r 範圍", file=sys.stderr)
+    sys.exit(1)
+for item in re.findall(r"-r (0x[0-9A-Fa-f]+)(?:-(0x[0-9A-Fa-f]+))?", m.group(1)):
+    lo = int(item[0], 16)
+    hi = int(item[1], 16) if item[1] else lo
+    ranges.update(chr(c) for c in range(lo, hi + 1))
 
-# lv_label_set_text / _fmt 的第一個字串引數
-pat = re.compile(r'lv_label_set_text(?:_fmt)?\s*\([^,]+,\s*"((?:[^"\\]|\\.)*)"')
+have = set(charset) | ranges
+
+# 會把字串送上畫面的入口。**新增這類 helper 時要一起加進來**——
+# 只認 lv_label_set_text 的話，經過自己寫的 section()／line() 的字串全都沒被檢查到；
+# 反過來把所有字串都掃又會抓到一堆只進 log 的字（"左右晃動" 之類），
+# 那些收進字型只是白白撐大檔案
+UI_CALLS = (
+    "lv_label_set_text", "lv_label_set_text_fmt",
+    "section", "line",                                  # records_screen.c 自己的
+    "cast_ui_set_prompt", "cast_ui_show_note",          # 擲筊畫面的提示與說明
+    "error_screen_set",
+)
+pat = re.compile(r"\b(?:" + "|".join(UI_CALLS) + r")\s*\(([^;]*?)\)\s*;", re.S)
+lit = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
 missing = {}
 for dirpath, _dirs, files in os.walk(os.path.join(root, "src")):
     for fn in files:
         if not fn.endswith(".c"):
             continue
         path = os.path.join(dirpath, fn)
-        for text in pat.findall(io.open(path, encoding="utf-8").read()):
-            text = text.replace("\\n", "").replace("\\t", "")
-            for ch in text:
-                if ch not in have:
-                    missing.setdefault(ch, set()).add(os.path.relpath(path, root))
+        for args in pat.findall(io.open(path, encoding="utf-8").read()):
+            for text in lit.findall(args):
+                text = text.replace("\\n", "").replace("\\t", "")
+                for ch in text:
+                    if ch not in have:
+                        missing.setdefault(ch, set()).add(os.path.relpath(path, root))
 
 if missing:
     print("✗ 這些字不在字型子集裡，畫面上會是豆腐方塊：", file=sys.stderr)

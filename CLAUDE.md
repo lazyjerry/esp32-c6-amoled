@@ -130,7 +130,7 @@ IDF 6.0 起 cJSON 不再內建，改吃 `espressif/cjson`。
 | [error_screen.c](src/error_screen.c) | 語料掛不起來時的死路畫面。刻意不退回擲筊 |
 | [cast_screen.c](src/cast_screen.c) | 擲筊，包住既有的 `cast_ui.c`。求籤後進來是**確認模式**，依筊象決定去向 |
 | [records.c](src/records.c) | 參拜紀錄存 NVS：序號 + 類別 + 籤號，環形保留最近 20 筆，另加只增不減的累計統計。**不存日期** |
-| [records_screen.c](src/records_screen.c) | 參拜簿。累計統計 + 求中的籤（點一列翻到該首），每次進來重建 |
+| [records_screen.c](src/records_screen.c) | 參拜簿。累計統計 + 最近求中的籤（由新到舊，點一列翻到該首），每次進來重建 |
 | [end_screen.c](src/end_screen.c) | 禮畢頁。解籤閣讀完的收尾，2.6 秒自動回正殿 |
 | [settings.c](src/settings.c) | 音量與亮度存 NVS（namespace `cfg`），只保管數值不負責套用 |
 | [settings_screen.c](src/settings_screen.c) | 設定頁。**直立格子條**（橫向滑桿會和左右滑動換頁搶手勢）加一行電量，拖動即時套用、放開才寫 NVS |
@@ -177,8 +177,10 @@ IDF 6.0 起 cJSON 不再內建，改吃 `espressif/cjson`。
 見 [docs/notes/pio-does-not-build-or-flash-spiffs.md](docs/notes/pio-does-not-build-or-flash-spiffs.md)。
 
 **畫面上出現豆腐方塊 = 字型子集漏字。** 全形空白 `U+3000`、全形逗號 `U+FF0C` 這種標點也要收，改字串就要回頭改 `gen-font.sh` 的字集再重產。
-字集變數（`*_CHARS`）由 `gen-font.sh` 自己 `compgen` 收齊，新增一組不必再去改別的地方——
-手寫清單漏掉新變數時，`check-glyphs.sh` 因為是自動掃描而照樣放行，字就這樣悄悄漏掉了。
+字集變數（`*_CHARS`）由 `gen-font.sh` 自己 `compgen` 收齊、標點的 `-r` 範圍由
+`check-glyphs.sh` 反過來從 `gen-font.sh` 解析，兩邊不會各走各的——這兩處都漏字過。
+**`check-glyphs.sh` 只檢查會上畫面的入口**（`lv_label_set_text`、`section`、`line`、
+`cast_ui_set_prompt` 等），新增這類 helper 要一起加進它的 `UI_CALLS`，否則經過它的字串不會被檢查。
 
 
 ## 已驗證可用

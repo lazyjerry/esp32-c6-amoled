@@ -26,9 +26,8 @@ LV_FONT_DECLARE(font_zh_16)
 static const char *TAG = "records-ui";
 
 #define PAD 20
-// 求中的籤最多列幾支。超過就是次數最少的那些看不到，
-// 但一頁捲到底本來就有極限，列太多只是把有用的資訊推到看不見的地方
-#define POEM_ROWS 24
+// 最多列幾支。順序來自最近 RECORDS_MAX 筆紀錄，所以這個上限只要不小於它就不會截斷
+#define POEM_ROWS RECORDS_MAX
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_body;
@@ -106,10 +105,10 @@ static void build_screen(void)
 static void fill_poems(void)
 {
     poem_stat_t items[POEM_ROWS];
-    int n = records_poem_stats(items, POEM_ROWS);
+    int n = records_recent_poems(items, POEM_ROWS);
     if (n == 0) return;
 
-    section("求中的籤");
+    section("最近求中的籤（由新到舊）");
     for (int i = 0; i < n; i++) {
         lv_obj_t *btn = lv_button_create(s_body);
         lv_obj_set_width(btn, lv_pct(100));

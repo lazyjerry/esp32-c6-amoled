@@ -37,7 +37,7 @@ NAV_CHARS='參拜簿尚開放'
 # 正殿的匾額與香爐（shrine_screen.c）
 SHRINE_CHARS='成功廟有求必應'
 # 參拜簿統計（records_screen.c）
-STAT_CHARS='累計統稟告求中的擲筊聖笑陰立次數參拜簿尚無紀錄回'
+STAT_CHARS='累計統稟告求中的擲筊聖笑陰立次數參拜簿尚無紀錄回最近由新舊'
 # 設定頁（settings_screen.c）
 SETTING_CHARS='音量亮度電'
 # 參拜紀錄：參拜簿與禮畢頁（records_screen.c、end_screen.c）
@@ -100,8 +100,10 @@ gen() {
 }
 
 # 內文與標題：ASCII + 中文子集
-gen font_zh_16 16 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C"
-gen font_zh_28 28 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C"
+# 標點走 range 不走字集：全形空白 U+3000、全形逗號 U+FF0C、全形括號 U+FF08~09。
+# check-glyphs.sh 會把這一行的 -r 解析出來當白名單，兩邊因此不會各走各的
+gen font_zh_16 16 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF08-0xFF09 -r 0xFF0C"
+gen font_zh_28 28 4 "$SYMBOLS" "-r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF08-0xFF09 -r 0xFF0C"
 # 大字溫度只出現數字，收整套中文會白白吃掉幾十 KB
 gen font_num_56 56 4 "" "-r 0x2D -r 0x2E -r 0x30-0x39 -r 0x43 -r 0xB0"
 # 天氣圖示。Arial Unicode 沒有 U+26A1 閃電，雷雨改用 U+2607

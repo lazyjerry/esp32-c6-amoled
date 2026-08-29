@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 16 px
  * Bpp: 4
- * Opts: --font /System/Library/Fonts/Supplemental/Arial Unicode.ttf --size 16 --bpp 4 --format lvgl --lv-font-name font_zh_16 --lv-include lvgl.h --no-compress -r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF0C --symbols 擲筊聖笑陰立搖動請誠心默念所求之事神明允可依此而行一不問過再宜極為罕見慎重出結果○●、。丁七三上下丑且世丙中丹主久乙九也乾亂了二于五些交亥亨享亮人什今仍他付仙代以件任份企伏休估伴似但位低住佑何佛作你佳來便係保信修俱個候借值偏偕做停健備催傳債傷像僵價儀儕儲先光克免兒入內全兩八公六共兵其具兼冒冬冷凡凶分切划初判別利到制刺刻則前剩劃力功加助努勉務勞勢勸化北十千升午半南卜卡卯危即卻厚厝原去又及友反取受口句只台合吉同名吐向君吸命和咨唉商善喜喪單嗟嘆器嚇囑四回因困固圓圖團土在地坐坡坤埃執基堂堅堪報場塵境增壁壓壞壬壽夏夕外夙多夜夠夥大天太夫央失奏奔好如妨妻始委姻婉婚嫁嫌子存孛季孤學它宅守安完官定客家容寂寅富寒察實寧寬寶將專尋對小少尚尤就局居屈屋展屬山工巧差己已巳布師帳帶常幫干平年幾序底庚度庭康延建弱張強形往待很徊律後徑徒得徘從復必忌忍忙快忽怎怕思急性怪恆恐恢恨恬息恰恿患情惜惱想愉意愛感態慌慕慢慣慫慮慶憂懂懈應懷懸戊戌成我或戶手才扎打扯扶找把投折押拉拒拖拱拼拿持指按挫挽捲捷掃掉排掛探接推提插揚換握損搬摸撐撥撮擅擋操擔擱擴擺擾攀攏攜支收改攻放故效敗教散整數文料斤新斷方於旁旗日早旬旺昌易映春是時晚景暖暗暢暫曉更書替最會月有朋服朗望期朦朧木未本東枉枝枯染查柳校根桂案條棄楚業榮樂樓標樣機檢權次欲欺歌止正步歧歲殘段比氛氣水汝江決沉沒油治況法波泰洋洒浪浮海消涉淡淨深添清減渠湊源準溢滿漲漸潮澄澤澱灘火災無焦然照煩熟熬燈燒營爐爭爾牡物牽犬狀猶獨率玉王珠班現理環生產用由甲申留略畫異當疑疲疾病症痊療癒癸發白百的皆盈益盛盡目直相省看真眼睡睦知矩短破硬碌碰確碼磨礎礙祈祿禍福禮禱禾私秋程稻積穩穫究空突站章第筆等答策算節範籌籤糾約紅級紛索累終給絲經綠維網綸緊線緣緩總績繕繫繼續缺置羅羨習翻耀老考耐耗聚聞聯聲職聽肯背能脈脫腳膽臨自至致與興舊舞舟般船良色花若苦茅茫荷莫華萬落著葛蒼蓄蔽薄薦藏藥蘭虎處虛虞虧蛇衝衡衣表袋被補裝裡西要覆規覓視親覺觀角解言訂計訊討記訪診註試話該誓語誤說誰課調談論諸講謝謹識議護讀變讓豐象豫負財貪責貴貸費資質賺購贏走赴起趁超越趕趨足跑跟跡路跳踏蹤躁身較輕輝輩輪轉辛辦辰近追退逐途這通逞速逢連週進逼遂遇運道達遠適遭遮遲遷選邀還邊郎部都鄉鄰酉配酬醞醫釀里量金錢錯鍵鐵鑽長門開閒間閭闊闔闖關防阻附陣除陷陽階際隨險雖雙雜雞難雨雲需霜靈靜非靠面音項順須預頓頭題顏願顧顯風飛飲養餘饋首香馬騖驗驚體高鬆鬥鬨鬼魁魚麼黃點鼓齊龍，錄臺市桃園竹苗栗彰林嘉義雄屏蓮澎湖祖隆鎮區縣參拜簿紀畢傾殿詩：寫閣示電廟統稟告溫濕眠池秒剛設描熱密晴霧淞毛細凍雪冰雹雷暴沙 -o /Users/lazyjerry/Documents/PlatformIO/Projects/my-first-esp32/src/fonts/font_zh_16.c
+ * Opts: --font /System/Library/Fonts/Supplemental/Arial Unicode.ttf --size 16 --bpp 4 --format lvgl --lv-font-name font_zh_16 --lv-include lvgl.h --no-compress -r 0x20-0x7E -r 0xB0 -r 0x3000 -r 0xFF08-0xFF09 -r 0xFF0C --symbols 擲筊聖笑陰立搖動請誠心默念所求之事神明允可依此而行一不問過再宜極為罕見慎重出結果○●、。丁七三上下丑且世丙中丹主久乙九也乾亂了二于五些交亥亨享亮人什今仍他付仙代以件任份企伏休估伴似但位低住佑何佛作你佳來便係保信修俱個候借值偏偕做停健備催傳債傷像僵價儀儕儲先光克免兒入內全兩八公六共兵其具兼冒冬冷凡凶分切划初判別利到制刺刻則前剩劃力功加助努勉務勞勢勸化北十千升午半南卜卡卯危即卻厚厝原去又及友反取受口句只台合吉同名吐向君吸命和咨唉商善喜喪單嗟嘆器嚇囑四回因困固圓圖團土在地坐坡坤埃執基堂堅堪報場塵境增壁壓壞壬壽夏夕外夙多夜夠夥大天太夫央失奏奔好如妨妻始委姻婉婚嫁嫌子存孛季孤學它宅守安完官定客家容寂寅富寒察實寧寬寶將專尋對小少尚尤就局居屈屋展屬山工巧差己已巳布師帳帶常幫干平年幾序底庚度庭康延建弱張強形往待很徊律後徑徒得徘從復必忌忍忙快忽怎怕思急性怪恆恐恢恨恬息恰恿患情惜惱想愉意愛感態慌慕慢慣慫慮慶憂懂懈應懷懸戊戌成我或戶手才扎打扯扶找把投折押拉拒拖拱拼拿持指按挫挽捲捷掃掉排掛探接推提插揚換握損搬摸撐撥撮擅擋操擔擱擴擺擾攀攏攜支收改攻放故效敗教散整數文料斤新斷方於旁旗日早旬旺昌易映春是時晚景暖暗暢暫曉更書替最會月有朋服朗望期朦朧木未本東枉枝枯染查柳校根桂案條棄楚業榮樂樓標樣機檢權次欲欺歌止正步歧歲殘段比氛氣水汝江決沉沒油治況法波泰洋洒浪浮海消涉淡淨深添清減渠湊源準溢滿漲漸潮澄澤澱灘火災無焦然照煩熟熬燈燒營爐爭爾牡物牽犬狀猶獨率玉王珠班現理環生產用由甲申留略畫異當疑疲疾病症痊療癒癸發白百的皆盈益盛盡目直相省看真眼睡睦知矩短破硬碌碰確碼磨礎礙祈祿禍福禮禱禾私秋程稻積穩穫究空突站章第筆等答策算節範籌籤糾約紅級紛索累終給絲經綠維網綸緊線緣緩總績繕繫繼續缺置羅羨習翻耀老考耐耗聚聞聯聲職聽肯背能脈脫腳膽臨自至致與興舊舞舟般船良色花若苦茅茫荷莫華萬落著葛蒼蓄蔽薄薦藏藥蘭虎處虛虞虧蛇衝衡衣表袋被補裝裡西要覆規覓視親覺觀角解言訂計訊討記訪診註試話該誓語誤說誰課調談論諸講謝謹識議護讀變讓豐象豫負財貪責貴貸費資質賺購贏走赴起趁超越趕趨足跑跟跡路跳踏蹤躁身較輕輝輩輪轉辛辦辰近追退逐途這通逞速逢連週進逼遂遇運道達遠適遭遮遲遷選邀還邊郎部都鄉鄰酉配酬醞醫釀里量金錢錯鍵鐵鑽長門開閒間閭闊闔闖關防阻附陣除陷陽階際隨險雖雙雜雞難雨雲需霜靈靜非靠面音項順須預頓頭題顏願顧顯風飛飲養餘饋首香馬騖驗驚體高鬆鬥鬨鬼魁魚麼黃點鼓齊龍，錄臺市桃園竹苗栗彰林嘉義雄屏蓮澎湖祖隆鎮區縣參拜簿紀畢傾殿詩：寫閣示電廟統稟告溫濕眠池秒剛設描熱密晴霧淞毛細凍雪冰雹雷暴沙 -o /Users/lazyjerry/Documents/PlatformIO/Projects/my-first-esp32/src/fonts/font_zh_16.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
@@ -18352,6 +18352,18 @@ static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
     0x0, 0xf3, 0x3f, 0xf3, 0x1d, 0xff, 0xff, 0xc0,
     0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
 
+    /* U+FF08 "（" */
+    0x0, 0x59, 0x1, 0xe2, 0x8, 0xa0, 0x1f, 0x40,
+    0x5f, 0x0, 0xac, 0x0, 0xca, 0x0, 0xd9, 0x0,
+    0xca, 0x0, 0xab, 0x0, 0x6f, 0x0, 0x2f, 0x30,
+    0xa, 0x90, 0x3, 0xe1, 0x0, 0x88, 0x0, 0x1,
+
+    /* U+FF09 "）" */
+    0x95, 0x0, 0x2e, 0x10, 0xa, 0x90, 0x4, 0xf1,
+    0x0, 0xf5, 0x0, 0xca, 0x0, 0xac, 0x0, 0x9e,
+    0x0, 0x9d, 0x0, 0xbb, 0x0, 0xe7, 0x2, 0xf2,
+    0x8, 0xb0, 0x1e, 0x30, 0x88, 0x0, 0x10, 0x0,
+
     /* U+FF0C "，" */
     0x78, 0xcd, 0x1c, 0x96, 0x10,
 
@@ -19529,8 +19541,10 @@ static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 124507, .adv_w = 256, .box_w = 16, .box_h = 14, .ofs_x = 0, .ofs_y = -1},
     {.bitmap_index = 124619, .adv_w = 256, .box_w = 16, .box_h = 15, .ofs_x = 0, .ofs_y = -2},
     {.bitmap_index = 124739, .adv_w = 256, .box_w = 16, .box_h = 16, .ofs_x = 0, .ofs_y = -2},
-    {.bitmap_index = 124867, .adv_w = 256, .box_w = 2, .box_h = 5, .ofs_x = 7, .ofs_y = -3},
-    {.bitmap_index = 124872, .adv_w = 256, .box_w = 2, .box_h = 9, .ofs_x = 7, .ofs_y = 0}
+    {.bitmap_index = 124867, .adv_w = 256, .box_w = 4, .box_h = 16, .ofs_x = 6, .ofs_y = -4},
+    {.bitmap_index = 124899, .adv_w = 256, .box_w = 4, .box_h = 16, .ofs_x = 6, .ofs_y = -4},
+    {.bitmap_index = 124931, .adv_w = 256, .box_w = 2, .box_h = 5, .ofs_x = 7, .ofs_y = -3},
+    {.bitmap_index = 124936, .adv_w = 256, .box_w = 2, .box_h = 9, .ofs_x = 7, .ofs_y = 0}
 };
 
 /*---------------------
@@ -19671,7 +19685,7 @@ static const uint16_t unicode_list_1[] = {
     0x97f8, 0x982b, 0x9842, 0x985a, 0x9868, 0x989b, 0x98e6, 0x98e9,
     0x98fc, 0x9966, 0x99a7, 0x99aa, 0x9a24, 0x9a28, 0x9a56, 0x9a75,
     0x9a78, 0x9a8c, 0x9a91, 0x9aaa, 0x9e0c, 0x9e13, 0x9e28, 0x9e2e,
-    0x9e63, 0x9e9a, 0x9edd, 0xfe5c, 0xfe6a
+    0x9e63, 0x9e9a, 0x9edd, 0xfe58, 0xfe59, 0xfe5c, 0xfe6a
 };
 
 /*Collect the unicode lists and glyph_id offsets*/
@@ -19683,7 +19697,7 @@ static const lv_font_fmt_txt_cmap_t cmaps[] =
     },
     {
         .range_start = 176, .range_length = 65131, .glyph_id_start = 96,
-        .unicode_list = unicode_list_1, .glyph_id_ofs_list = NULL, .list_length = 1069, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY
+        .unicode_list = unicode_list_1, .glyph_id_ofs_list = NULL, .list_length = 1071, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY
     }
 };
 
@@ -19731,8 +19745,8 @@ lv_font_t font_zh_16 = {
 #endif
     .get_glyph_dsc = lv_font_get_glyph_dsc_fmt_txt,    /*Function pointer to get glyph's data*/
     .get_glyph_bitmap = lv_font_get_bitmap_fmt_txt,    /*Function pointer to get glyph's bitmap*/
-    .line_height = 18,          /*The maximum line height required by the font*/
-    .base_line = 3,             /*Baseline measured from the bottom of the line*/
+    .line_height = 19,          /*The maximum line height required by the font*/
+    .base_line = 4,             /*Baseline measured from the bottom of the line*/
 #if !(LVGL_VERSION_MAJOR == 6 && LVGL_VERSION_MINOR == 0)
     .subpx = LV_FONT_SUBPX_NONE,
 #endif

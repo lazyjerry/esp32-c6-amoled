@@ -112,31 +112,34 @@ esp_err_t records_flush(void)
     return ESP_OK;
 }
 
-// 次數多的排前面。筆數最多 6×63，插入排序夠用也看得懂
-int records_poem_stats(poem_stat_t *out, int max)
+// 最近求中的籤。順序直接沿用環形紀錄，不必另存「最後一次是第幾號」——
+// 同一支籤再次求中時，新的那筆排在前面，舊的那次被視為重複跳過，
+// 效果就是「重複的拉到最上方」
+int records_recent_poems(poem_stat_t *out, int max)
 {
     if (!s_ready || !out || max <= 0) return 0;
 
-    int n = 0;
-    for (int c = 0; c < RITUAL_CAT_COUNT; c++) {
-        for (int p = 0; p < RECORDS_POEM_MAX; p++) {
-            if (!s_poems[c][p]) continue;
-            poem_stat_t item = {.cat = (uint8_t)c, .poem = (uint8_t)p, .count = s_poems[c][p]};
+    record_t rec[RECORDS_MAX];
+    int n = records_recent(rec, RECORDS_MAX);
 
-            int i = n < max ? n : max - 1;
-            if (i == max - 1 && out[i].count >= item.count) continue;   // 塞不下且比最後一名少
-            while (i > 0 && out[i - 1].count < item.count) {
-                out[i] = out[i - 1];
-                i--;
-            }
-            out[i] = item;
-            if (n < max) n++;
+    int m = 0;
+    for (int i = 0; i < n && m < max; i++) {
+        int cat = rec[i].cat, poem = rec[i].poem;
+        if (cat < 0 || cat >= RITUAL_CAT_COUNT || poem <= 0 || poem >= RECORDS_POEM_MAX) continue;
+
+        bool dup = false;
+        for (int j = 0; j < m; j++) {
+            if (out[j].cat == cat && out[j].poem == poem) { dup = true; break; }
         }
-    }
-    return n;
-}
+        if (dup) continue;   // 前面已經有更新的一次了
 
-uint32_t records_total(void) { return s_total; }
+        out[m].cat = (uint8_t)cat;
+        out[m].poem = (uint8_t)poem;
+        out[m].count = s_poems[cat][poem];
+        m++;
+    }
+    return m;
+}
 
 esp_err_t records_add(int cat, int poem, uint16_t *out_seq)
 {

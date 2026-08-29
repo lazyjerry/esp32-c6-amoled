@@ -60,5 +60,7 @@ void records_count_tell(int cat);
 // 把待寫入的計數落地。挑沒有動畫在跑的時機呼叫
 esp_err_t records_flush(void);
 
-// 求中的籤，次數多的在前。回傳實際填入的筆數
-int records_poem_stats(poem_stat_t *out, int max);
+// 最近求中的籤，新的在前。同一支籤重複求中只留最新那一次的位置，
+// 次數仍是全歷史累計。順序來自最近 RECORDS_MAX 筆參拜紀錄——
+// 更早求中過的籤不在這份清單裡，那是「最近」這個詞的代價
+int records_recent_poems(poem_stat_t *out, int max);
