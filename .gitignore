@@ -21,3 +21,10 @@ spiffs_content/
 
 # Python 匯入產生器腳本時留下的
 scripts/__pycache__/
+
+# 跑完就沒有下次的腳本。留在本機當紀錄，但不該出現在版控裡讓人以為是日常工具，
+# 各支的當時用途與「為什麼不會再跑」寫在 scripts/one-time/README.md
+scripts/one-time/
+
+# 施工筆記工具的工作目錄，屬個人流程不屬專案
+docs/working-notes-skill/

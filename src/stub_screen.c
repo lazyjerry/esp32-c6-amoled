@@ -53,11 +53,12 @@ static esp_err_t enter_settings(void) { return enter_stub(&s_settings); }
 static bool on_event(screen_event_t ev)
 {
     switch (ev) {
-    case SCREEN_EV_BOOT_KEY:
+    case SCREEN_EV_BOOT_HOLD:
     case SCREEN_EV_SWIPE_LEFT:
     case SCREEN_EV_SWIPE_RIGHT:
         screen_mgr_goto(&shrine_screen);
         return true;
+    case SCREEN_EV_BOOT_KEY:
     case SCREEN_EV_SHAKE:
     case SCREEN_EV_WAVE:
         return false;

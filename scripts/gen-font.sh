@@ -34,6 +34,8 @@ UI_CHARS='天氣溫度濕體感風速更新連線中失敗休眠電池未取得�
 ERR_CHARS='語料未燒錄接上執行'
 # 導覽：正殿的兩個側翼（stub_screen.c）
 NAV_CHARS='參拜簿尚開放'
+# 儀式流程：每日參拜、稟告、求籤、解籤閣
+RITUAL_CHARS='事業姻緣財運健康學業家宅向神明行三拜把機身前傾下再起一二禮成所求何搖籤問回正殿詩讀到：這首的白話解尚寫入。有必應收後閣答示得此允不極罕見'
 # 擲筊畫面
 CAST_CHARS='擲筊聖笑陰立搖動請誠心默念所求之事神明允可依此而行一不問過再宜極為罕見慎重擲出結果'
 WX_CHARS='晴多雲陰有霧淞毛細雨凍陣小大雪冰雹珠雷暴強沙塵'
@@ -59,7 +61,7 @@ import sys
 s = sys.argv[1]
 seen = {}
 sys.stdout.write("".join(seen.setdefault(c, c) for c in s if c not in seen))
-' "${UI_CHARS}${ERR_CHARS}${NAV_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
+' "${UI_CHARS}${ERR_CHARS}${NAV_CHARS}${RITUAL_CHARS}${CAST_CHARS}${WX_CHARS}${GEO_CHARS}${CORPUS_CHARS}${EXTRA}")"
 
 gen() {
     local name="$1" size="$2" bpp="$3" symbols="$4" ranges="$5"

@@ -9,8 +9,13 @@
 
 #include "esp_err.h"
 
+// BOOT 的語意固定成兩條，跨畫面一致：
+//   短按 = 這個畫面的主要動作（沒有主要動作的畫面就不接）
+//   長按 = 離開，回正殿
+// 原本半數畫面把短按當返回、半數當功能鍵，同一顆鍵在不同畫面做相反的事，記不住
 typedef enum {
     SCREEN_EV_BOOT_KEY,      // BOOT 鍵短按
+    SCREEN_EV_BOOT_HOLD,     // BOOT 鍵長按。按滿就發，不等放開
     SCREEN_EV_SHAKE,         // IMU 上下甩
     SCREEN_EV_WAVE,          // IMU 左右晃。刻意不叫 swipe，那是手指的動作
     SCREEN_EV_SWIPE_LEFT,    // 手指往左掃

@@ -1,4 +1,4 @@
-// 由 scripts/gen-testcard.py 產生，不要手改。
+// 由 gen-testcard.py 產生，不要手改。該產生器已歸到 scripts/one-time/（不進版控）。
 // S4 驗證用的全螢幕測試圖：368x448 RGB565（已 byte-swap）。
 // 橫向漸層加縱向色帶，畫面撕裂、位移或錯色都看得出來。
 #include "testcard.h"

@@ -107,6 +107,11 @@ static bool swing_take(swing_t *sw)
     return true;
 }
 
+// 低通後的重力方向。給「前傾」這種靜態姿勢變化用——
+// 甩動偵測看的是動態分量，姿勢看的是重力本身，兩者用同一份估計但問法不同
+static float s_gravity[3];
+static bool s_gravity_ready;
+
 static void imu_task(void *arg)
 {
     float g[3] = {0, 0, 0};
@@ -120,6 +125,8 @@ static void imu_task(void *arg)
                 primed = true;
             }
             for (int i = 0; i < 3; i++) g[i] += GRAVITY_ALPHA * (a[i] - g[i]);
+            for (int i = 0; i < 3; i++) s_gravity[i] = g[i];
+            s_gravity_ready = true;
 
             float norm = sqrtf(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
             if (norm > 0.3f) {
@@ -170,6 +177,13 @@ esp_err_t imu_init(void)
     ESP_RETURN_ON_FALSE(xTaskCreate(imu_task, "imu", 3072, NULL, 5, NULL) == pdPASS,
                         ESP_ERR_NO_MEM, TAG, "task");
     return ESP_OK;
+}
+
+bool imu_gravity(float out[3])
+{
+    if (!s_gravity_ready) return false;
+    for (int i = 0; i < 3; i++) out[i] = s_gravity[i];
+    return true;
 }
 
 bool imu_take_shake(void) { return swing_take(&s_shake); }

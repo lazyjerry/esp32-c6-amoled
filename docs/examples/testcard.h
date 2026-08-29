@@ -1,4 +1,4 @@
-// S4 驗證用的全螢幕測試圖。產生器：scripts/gen-testcard.py
+// S4 驗證用的全螢幕測試圖。產生器 scripts/one-time/gen-testcard.py 只留在本機不進版控
 #pragma once
 
 #include <stdint.h>

@@ -37,6 +37,14 @@ poems_doc = json.load(io.open(os.path.join(src, "poems.json"), encoding="utf-8")
 if poems_doc.get("schema") not in ("poems/v1", "poems/v2"):
     sys.exit(f"✗ poems.json 的 schema 不認得（讀到 {poems_doc.get('schema')!r}）")
 
+# 白話解讀。缺這個檔不算錯——解讀是分批補的，籤詩本身可以先上
+readings_path = os.path.join(src, "readings.json")
+readings_doc = None
+if os.path.isfile(readings_path):
+    readings_doc = json.load(io.open(readings_path, encoding="utf-8"))
+    if readings_doc.get("schema") != "readings/v1":
+        sys.exit(f"✗ readings.json 的 schema 不認得（讀到 {readings_doc.get('schema')!r}）")
+
 poems = poems_doc["poems"]
 missing = [p["no"] for p in poems if not p.get("text")]
 unverified = [p["no"] for p in poems if p.get("text") and not p.get("verified")]
@@ -50,6 +58,32 @@ print(f"  已填寫    {len(poems) - len(missing)} 首")
 print(f"  留空待補  {len(missing)} 首" + (f"：{missing[:20]}{' …' if len(missing) > 20 else ''}" if missing else ""))
 print(f"  待校對    {len(unverified)} 首" + (f"：{unverified}" if unverified else ""))
 
+# 解讀的類別順序就是裝置端 ritual_cat_t 的順序，錯位會讓「問事業」顯示姻緣的解讀。
+# 這是靜默錯誤——畫面照樣好好的，只有內容不對——所以在這裡硬性比對
+EXPECTED_CATS = ["事業", "姻緣", "財運", "健康", "學業", "家宅"]
+readings = []
+if readings_doc:
+    if readings_doc.get("categories") != EXPECTED_CATS:
+        sys.exit(f"✗ readings.json 的 categories 與 src/ritual.c 的順序不符\n"
+                 f"   讀到 {readings_doc.get('categories')}\n"
+                 f"   應為 {EXPECTED_CATS}")
+    readings = readings_doc["readings"]
+    filled = [r for r in readings if r.get("texts")]
+    for r in filled:
+        if len(r["texts"]) != len(EXPECTED_CATS):
+            sys.exit(f"✗ 第 {r['no']} 籤的解讀有 {len(r['texts'])} 段，應為 {len(EXPECTED_CATS)} 段")
+        for i, t in enumerate(r["texts"]):
+            scan_bad(t, f"第 {r['no']} 籤的{EXPECTED_CATS[i]}解讀")
+    print()
+    print(f"白話解讀：{len(filled)} / {len(readings)} 首已寫"
+          f"（{len(filled) * len(EXPECTED_CATS)} / {len(readings) * len(EXPECTED_CATS)} 段）")
+    if len(filled) < len(readings):
+        todo = [r["no"] for r in readings if not r.get("texts")]
+        print(f"  待補：{todo[:20]}{' …' if len(todo) > 20 else ''}")
+else:
+    print()
+    print("白話解讀：沒有 data/readings.json，解籤閣只會顯示籤詩本文")
+
 if missing or unverified:
     print()
     print("⚠  尚未可上產品。text=null 的要補齊，verified=false 的要人工校對後改成 true。")
@@ -61,8 +95,10 @@ if check_only:
 
 os.makedirs(out, exist_ok=True)
 
-# 裝置端只需要能查表的最小結構，欄位名縮短省 flash 與解析成本
-slim = {"poems": [{"n": p["no"], "g": p.get("ganzhi"), "t": p["text"]}
+# 裝置端只需要能查表的最小結構，欄位名縮短省 flash 與解析成本。
+# 欄位名要和 src/content.c 的 copy_field 對得上，改這裡就要改那裡
+slim = {"poems": [{"n": p["no"], "m": p.get("name"), "g": p.get("ganzhi"),
+                   "k": p.get("trigram"), "a": p.get("attr"), "t": p["text"]}
                   for p in poems if p.get("text")]}
 io.open(os.path.join(out, "poems.json"), "w", encoding="utf-8").write(
     json.dumps(slim, ensure_ascii=False, separators=(",", ":")) + "\n")
@@ -72,18 +108,30 @@ io.open(os.path.join(out, "poems.json"), "w", encoding="utf-8").write(
 charset = set()
 for p in poems:
     if p.get("text"):
-        charset |= set(p["text"])
-        charset |= set(p.get("ganzhi") or "")
+        for key in ("text", "ganzhi", "trigram", "attr"):
+            charset |= set(p.get(key) or "")
     if p.get("name"):
         charset |= set(p["name"])
+for r in readings:
+    for t in (r.get("texts") or []):
+        charset |= set(t)
 charset = {c for c in charset if c.strip() and ord(c) > 0x7F}
 io.open(os.path.join(out, "charset.txt"), "w", encoding="utf-8").write(
     "".join(sorted(charset)) + "\n")
+
+if readings:
+    slim_r = {"readings": [{"n": r["no"], "t": r["texts"]}
+                           for r in readings if r.get("texts")]}
+    io.open(os.path.join(out, "readings.json"), "w", encoding="utf-8").write(
+        json.dumps(slim_r, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 print()
 print(f"產出 {out}/")
 print(f"  poems.json    {os.path.getsize(os.path.join(out, 'poems.json'))} bytes"
       f"（{len(slim['poems'])} 首）")
+if readings:
+    print(f"  readings.json {os.path.getsize(os.path.join(out, 'readings.json'))} bytes"
+          f"（{len(slim_r['readings'])} 首）")
 print(f"  charset.txt   {len(charset)} 個相異中文字")
 PY
 

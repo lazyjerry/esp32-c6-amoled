@@ -73,6 +73,10 @@ typedef struct {
 static lv_obj_t *s_scr;
 static lv_obj_t *s_hint;
 static lv_obj_t *s_hint2;
+static lv_obj_t *s_note;
+
+#define HINT_BIG_DEFAULT   "搖一搖　擲筊"
+#define HINT_SMALL_DEFAULT "請誠心默念所求之事"
 
 static block_t s_blk[BLOCKS];
 static lv_timer_t *s_timer;
@@ -202,6 +206,7 @@ static void show_idle(void)
     }
     lv_obj_add_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(s_note, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void play_due_clacks(void)
@@ -304,14 +309,21 @@ static void build_screen(void)
     s_hint = lv_label_create(s_scr);
     lv_obj_set_style_text_font(s_hint, &font_zh_28, 0);
     lv_obj_set_style_text_color(s_hint, lv_color_white(), 0);
-    lv_label_set_text(s_hint, "搖一搖　擲筊");
+    lv_label_set_text(s_hint, HINT_BIG_DEFAULT);
     lv_obj_align(s_hint, LV_ALIGN_TOP_MID, 0, 44);
 
     s_hint2 = lv_label_create(s_scr);
     lv_obj_set_style_text_font(s_hint2, &font_zh_16, 0);
     lv_obj_set_style_text_color(s_hint2, lv_color_hex(0x9AA0A6), 0);
-    lv_label_set_text(s_hint2, "請誠心默念所求之事");
+    lv_label_set_text(s_hint2, HINT_SMALL_DEFAULT);
     lv_obj_align(s_hint2, LV_ALIGN_TOP_MID, 0, 92);
+
+    // 結果停住時才出現，說明下一步。放最下面，不擋住放大的筊
+    s_note = lv_label_create(s_scr);
+    lv_obj_set_style_text_font(s_note, &font_zh_16, 0);
+    lv_obj_set_style_text_color(s_note, lv_color_hex(0xD8C090), 0);
+    lv_obj_align(s_note, LV_ALIGN_BOTTOM_MID, 0, -30);
+    lv_obj_add_flag(s_note, LV_OBJ_FLAG_HIDDEN);
 
     // 影子先建，才會壓在筊底下
     for (int i = 0; i < BLOCKS; i++) {
@@ -396,5 +408,25 @@ void cast_ui_show_hint(void)
     lvgl_port_lock(0);
     lv_obj_remove_flag(s_hint, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(s_hint2, LV_OBJ_FLAG_HIDDEN);
+    lvgl_port_unlock();
+}
+
+void cast_ui_set_prompt(const char *big, const char *small)
+{
+    lvgl_port_lock(0);
+    lv_label_set_text(s_hint, big ? big : HINT_BIG_DEFAULT);
+    lv_label_set_text(s_hint2, small ? small : HINT_SMALL_DEFAULT);
+    lvgl_port_unlock();
+}
+
+void cast_ui_show_note(const char *text)
+{
+    lvgl_port_lock(0);
+    if (text && text[0]) {
+        lv_label_set_text(s_note, text);
+        lv_obj_remove_flag(s_note, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_note, LV_OBJ_FLAG_HIDDEN);
+    }
     lvgl_port_unlock();
 }

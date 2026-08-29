@@ -2,7 +2,8 @@
 // 結果會一直停在畫面上，按鍵或左右晃動才收掉；收掉後要等冷卻時間才能再擲。
 //
 // 按鍵分工：PWR 專職電源，短按軟關機（AXP2101 切電，μA 等級）、長按是 PMIC 硬體斷電；
-// BOOT 是功能鍵，擲筊與收結果都走它。PWR 不佔 GPIO，讀 AXP2101 的 INTSTS2 就知道有沒有短按。
+// BOOT 是功能鍵，短按做目前畫面的主要動作、長按回正殿。
+// PWR 不佔 GPIO，讀 AXP2101 的 INTSTS2 就知道有沒有短按。
 #include <inttypes.h>
 #include <stdbool.h>
 
@@ -34,6 +35,8 @@ void app_main(void) { verify_s3_run(); }
 #else
 
 #define POLL_MS     50
+// 按滿這麼久就算長按（離開目前畫面）。短於此的放開才算短按
+#define HOLD_MS     900
 // 開機淡入、關機淡出：面板亮度（SH8601 0x51），讓兩個狀態轉換看得出來
 #define BRIGHT_FULL 0xFF
 #define FADE_IN_MS  800
@@ -41,12 +44,23 @@ void app_main(void) { verify_s3_run(); }
 
 static const char *TAG = "app";
 
-static void wait_button_released(void)
+// 按住期間就地等，跟改造前一樣不讓事件連發。長按滿 HOLD_MS 當場發出去，
+// 不等放開——手指還壓著就看到畫面切走，才知道長按已經生效
+static void dispatch_boot_key(void)
 {
+    int64_t pressed_at = esp_timer_get_time();
+    bool held = false;
+
     while (gpio_get_level(BOARD_BOOT_GPIO) == 0) {
+        if (!held && esp_timer_get_time() - pressed_at >= HOLD_MS * 1000LL) {
+            held = true;
+            screen_mgr_dispatch(SCREEN_EV_BOOT_HOLD);
+        }
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));
     }
     vTaskDelay(pdMS_TO_TICKS(POLL_MS));   // 去彈跳
+
+    if (!held) screen_mgr_dispatch(SCREEN_EV_BOOT_KEY);
 }
 
 // LVGL 起來後，面板暫存器和畫面資料共用同一條 QSPI。
@@ -135,8 +149,7 @@ void app_main(void)
         if (prev_level == 1 && level == 0) {
             vTaskDelay(pdMS_TO_TICKS(POLL_MS));   // 去彈跳後再確認一次
             if (gpio_get_level(BOARD_BOOT_GPIO) == 0) {
-                wait_button_released();
-                screen_mgr_dispatch(SCREEN_EV_BOOT_KEY);
+                dispatch_boot_key();
                 level = 1;
             }
         }

@@ -126,7 +126,7 @@ static void list_temple_dir(void)
 {
     DIR *dir = opendir(TEMPLE_DIR);
     if (!dir) {
-        ESP_LOGW(TAG, "① 打不開 %s——卡上沒有這個目錄，先跑 scripts/prep-sdcard.sh", TEMPLE_DIR);
+        ESP_LOGW(TAG, "① 打不開 %s——卡上沒有這個目錄，先跑 scripts/one-time/prep-sdcard.sh", TEMPLE_DIR);
         return;
     }
     int n = 0;

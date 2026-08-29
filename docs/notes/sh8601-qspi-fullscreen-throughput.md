@@ -37,6 +37,6 @@
 
 ## 驗證
 `docs/examples/verify_s4.c`（測完歸檔）。要複現就把它放回 `src/`，
-搭配 `scripts/gen-testcard.py` 產的 330KB 測試圖，
+搭配 `scripts/one-time/gen-testcard.py`（一次性腳本，不進版控）產的 330KB 測試圖，
 `pio run -e verify-s4 -t upload` 之後讀序列埠。
 用真圖而非小圖重複送——小圖會被 flash 快取命中，量出來偏樂觀。
